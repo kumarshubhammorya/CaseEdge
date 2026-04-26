@@ -125,7 +125,7 @@ export default function App() {
         <Sidebar activeSection={activeSection} setActiveSection={setActiveSection} appState={appState} />
         
         <main className="flex-1 overflow-y-auto bg-slate-800/10 min-h-0 flex flex-col">
-          <div className="w-full max-w-5xl mx-auto py-8 px-6 lg:px-8 flex-1 flex flex-col min-h-0">
+          <div className="w-full max-w-5xl mx-auto py-6 md:py-8 px-4 md:px-6 lg:px-8 flex-1 flex flex-col min-h-0 pb-24 md:pb-8">
             {activeSection === 'team' && <TeamSection appState={appState} setAppState={setAppState} />}
             {activeSection === 'intake' && <IntakeSection appState={appState} setAppState={setAppState} />}
             {activeSection === 'issueTree' && <IssueTreeSection appState={appState} setAppState={setAppState} />}
