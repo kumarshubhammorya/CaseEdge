@@ -97,11 +97,11 @@ export const AssumptionTracker = ({ onGoBack }: Props) => {
     >
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-white flex items-center gap-2" style={{ height: '32px' }}>
+          <h2 className="text-2xl font-bold text-white flex items-center gap-2">
             <Database className="w-6 h-6 text-blue-500" />
             Assumption Tracker
           </h2>
-          <p className="text-slate-400 text-sm mt-1" style={{ height: '50px' }}>Identify and monitor critical beliefs that underpin your recommendation.</p>
+          <p className="text-slate-400 text-sm mt-1">Identify and monitor critical beliefs that underpin your recommendation.</p>
         </div>
         
         <div className="flex items-center gap-3">

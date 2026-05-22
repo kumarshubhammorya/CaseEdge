@@ -18,6 +18,8 @@ import { ProgressBar } from './components/ProgressBar';
 import { useAppContext } from './context/AppContext';
 import { exportSessionToPdf } from './lib/exportUtils';
 import { sounds } from './lib/sounds';
+import { DiagnosticsPanel } from './components/DiagnosticsPanel';
+
 
 export default function App() {
   const [showLanding, setShowLanding] = useState(true);
@@ -90,6 +92,7 @@ export default function App() {
           <span className="text-blue-500 truncate">● <span className="hidden sm:inline">GEMINI_</span>ONLINE</span>
         </div>
       </footer>
+      <DiagnosticsPanel />
     </div>
   );
 }
