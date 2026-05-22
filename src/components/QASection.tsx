@@ -1,13 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { simulateQA } from '../services/geminiService';
 import { AppState, QA } from '../types';
+import { EmptyState } from './EmptyState';
 import { motion, AnimatePresence } from 'motion/react';
 import { Brain, Check, X, RotateCcw, HelpCircle, Trophy } from 'lucide-react';
 import { ShimmerButton, CyclingLoadingText, TypewriterText, EditableField } from './MicroInteractions';
+import { sounds } from '../lib/sounds';
+
+import { useAppContext } from '../context/AppContext';
 
 type Props = {
-  appState: AppState;
-  setAppState: React.Dispatch<React.SetStateAction<AppState>>;
+  onGoBack?: () => void;
 };
 
 const Flashcard: React.FC<{
@@ -19,7 +23,10 @@ const Flashcard: React.FC<{
   const [isFlipped, setIsFlipped] = useState(false);
 
   return (
-    <div className="perspective-1000 h-64 w-full cursor-pointer group" onClick={() => setIsFlipped(!isFlipped)}>
+    <div className="perspective-1000 h-80 lg:h-96 w-full cursor-pointer group" onClick={() => {
+      sounds.playHover();
+      setIsFlipped(!isFlipped);
+    }}>
       <motion.div
         className="w-full h-full relative transition-all duration-500 preserve-3d"
         animate={{ rotateY: isFlipped ? 180 : 0 }}
@@ -27,11 +34,11 @@ const Flashcard: React.FC<{
       >
         {/* Front: Question */}
         <div className="absolute inset-0 backface-hidden bg-slate-900 border border-slate-800 rounded-xl p-6 flex flex-col justify-between shadow-xl group-hover:border-slate-700 transition-colors">
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
+          <div className="space-y-4 overflow-y-auto pr-2 mb-2 custom-scrollbar flex-1">
+            <div className="flex justify-between items-center shrink-0">
               <span className="text-[10px] font-mono text-amber-500 font-bold uppercase tracking-widest">Question {index + 1}</span>
-              {qa.status === 'got-it' && <Check className="w-4 h-4 text-green-500" />}
-              {qa.status === 'need-practice' && <RotateCcw className="w-4 h-4 text-red-500" />}
+              {qa.status === 'got-it' && <Check className="w-4 h-4 text-green-500 shrink-0" />}
+              {qa.status === 'need-practice' && <RotateCcw className="w-4 h-4 text-red-500 shrink-0" />}
             </div>
             <div className="-m-2 p-2" onClick={(e) => e.stopPropagation()}>
               <EditableField
@@ -43,7 +50,7 @@ const Flashcard: React.FC<{
               />
             </div>
           </div>
-          <div className="flex items-center gap-2 text-slate-500 text-[10px] uppercase font-bold">
+          <div className="flex items-center gap-2 text-slate-500 text-[10px] uppercase font-bold shrink-0 pt-2 border-t border-slate-800/50">
             <HelpCircle className="w-3 h-3" />
             <span>Click to reveal answer</span>
           </div>
@@ -55,9 +62,9 @@ const Flashcard: React.FC<{
           style={{ transform: 'rotateY(180deg)' }}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="space-y-3 overflow-y-auto pr-2 custom-scrollbar">
-            <span className="text-[10px] font-mono text-blue-400 font-bold uppercase tracking-widest">Model Answer</span>
-            <div className="-m-2 p-2">
+          <div className="space-y-3 overflow-y-auto pr-2 custom-scrollbar flex-1 mb-2">
+            <span className="text-[10px] font-mono text-blue-400 font-bold uppercase tracking-widest block shrink-0">Model Answer</span>
+            <div className="-m-2 p-2 block">
                <EditableField
                   value={qa.modelAnswer}
                   onChange={(val) => onUpdateText('modelAnswer', val)}
@@ -68,12 +75,13 @@ const Flashcard: React.FC<{
             </div>
           </div>
           
-          <div className="pt-4 border-t border-slate-700 flex justify-between items-center bg-slate-800/50 -mx-6 -mb-6 p-4 rounded-b-xl">
+          <div className="pt-4 border-t border-slate-700 flex justify-between items-center bg-slate-800/50 -mx-6 -mb-6 p-4 rounded-b-xl shrink-0">
             <p className="text-[10px] text-slate-500 uppercase font-bold">How did you do?</p>
             <div className="flex gap-2">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
+                  sounds.playRemove();
                   onStatusChange('need-practice');
                   setIsFlipped(false);
                 }}
@@ -89,6 +97,7 @@ const Flashcard: React.FC<{
               <button
                 onClick={(e) => {
                   e.stopPropagation();
+                  sounds.playSuccess();
                   onStatusChange('got-it');
                   setIsFlipped(false);
                 }}
@@ -109,23 +118,30 @@ const Flashcard: React.FC<{
   );
 };
 
-export const QASection: React.FC<Props> = ({ appState, setAppState }) => {
+export const QASection: React.FC<Props> = ({ onGoBack }) => {
+  const { appState, setAppState } = useAppContext();
   const [isSimulating, setIsSimulating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (appState.expandedRecommendation && !appState.qas && !isSimulating) {
+      handleSimulate();
+    }
+  }, [appState.expandedRecommendation]);
 
   const handleSimulate = async () => {
+    sounds.playClick();
     if (!appState.expandedRecommendation) {
-      setError("Please generate an SCR recommendation first.");
+      toast.error("Please generate an SCR recommendation first.");
       return;
     }
-    setError(null);
     setIsSimulating(true);
     try {
       const recText = `Situation: ${appState.expandedRecommendation.situation}\nComplication: ${appState.expandedRecommendation.complication}\nResolution: ${appState.expandedRecommendation.resolution}`;
       const result = await simulateQA(recText);
       setAppState(prev => ({ ...prev, qas: result }));
+      toast.success("Simulation drills generated!");
     } catch (err: any) {
-      setError("Failed to simulate questions. " + (err?.message || ""));
+      toast.error("Failed to simulate questions: " + (err?.message || ""));
     } finally {
       setIsSimulating(false);
     }
@@ -164,7 +180,7 @@ export const QASection: React.FC<Props> = ({ appState, setAppState }) => {
             onClick={handleSimulate}
             disabled={isSimulating || !appState.expandedRecommendation}
             isLoading={isSimulating}
-            className="bg-red-600 hover:bg-red-500 disabled:bg-slate-700 text-[10px] uppercase font-bold text-white px-3 py-1.5 rounded transition-colors"
+            className="bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 text-[10px] uppercase font-bold text-white px-3 py-1.5 rounded transition-colors"
           >
             {isSimulating ? 'Simulating...' : 'Generate New Drill'}
           </ShimmerButton>
@@ -201,9 +217,14 @@ export const QASection: React.FC<Props> = ({ appState, setAppState }) => {
       </div>
 
       <div className="p-6 space-y-6 flex-1 overflow-y-auto custom-scrollbar">
-        {error && <div className="text-red-400 text-xs">{error}</div>}
-
-        {appState.qas ? (
+        {!appState.slideOutline ? (
+          <EmptyState 
+            title="Awaiting Slide Outline"
+            description="You need to generate a slide outline first before anticipating Judge Q&A."
+            actionLabel="Go to Slide Outline"
+            onAction={onGoBack}
+          />
+        ) : appState.qas ? (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <p className="text-[10px] uppercase text-slate-500 font-bold">Prep Session: Judge Q&A</p>
@@ -231,6 +252,17 @@ export const QASection: React.FC<Props> = ({ appState, setAppState }) => {
           <div className="h-48 border border-dashed border-slate-800 rounded bg-slate-900/20 flex flex-col items-center justify-center text-slate-600">
             <Brain className="w-8 h-8 mb-3 opacity-20" />
             <span className="text-xs uppercase font-bold tracking-widest">Awaiting Simulation</span>
+          </div>
+        )}
+
+        {progressPercent === 100 && (
+          <div className="flex flex-col items-center justify-center pt-8 border-t border-slate-800 mt-6 pb-4 space-y-4">
+             <div className="text-center font-bold text-green-400 uppercase tracking-widest text-sm">
+                Case Competition Prep Complete!
+             </div>
+             <p className="text-xs text-slate-500">
+                You can now export your session from the top navigation bar.
+             </p>
           </div>
         )}
       </div>

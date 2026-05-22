@@ -3,6 +3,7 @@ export type CaseGlance = {
   coreProblem: string;
   keyStakeholders: string[];
   keyConstraints: string[];
+  clarifyingQuestions?: string[];
   caseType: string;
 };
 
@@ -38,19 +39,29 @@ export type QuantitativeEstimate = {
   keyMetric: { value: string; assumption: string };
 };
 
+export type SlideInfo = {
+  title: string;
+  purpose: string;
+  bullets: string[];
+};
+
+export type Assumption = {
+  id: string;
+  statement: string;
+  category: 'Market' | 'Financial' | 'Operational' | 'Regulatory';
+  riskLevel: 'High' | 'Medium' | 'Low';
+  whatBreaksThis: string;
+};
+
 export type AppState = {
-  teamRoles?: {
-    caseLead: string;
-    dataNumbers: string;
-    slideStory: string;
-    devilsAdvocate: string;
-  };
   caseBrief: string;
   caseGlance: CaseGlance | null;
+  hypothesis: string;
   issueTree: IssueTreeNode | null;
   frameworks: Framework[] | null;
   coreRecommendation: string;
   expandedRecommendation: SCRStructure | null;
+  slideOutline: SlideInfo[] | null;
   storyHook: string | null;
   quantificationPrompt: string;
   quantitativeEstimate: QuantitativeEstimate | null;
@@ -58,4 +69,5 @@ export type AppState = {
   calibratedRecommendation: string | null;
   qas: QA[] | null;
   activeFrameworks: Framework[];
+  assumptions: Assumption[] | null;
 };

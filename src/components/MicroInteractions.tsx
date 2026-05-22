@@ -5,6 +5,10 @@ import { Check, Copy, Pencil } from 'lucide-react';
 // Prevents re-animating the same text globally.
 const animatedStrings = new Set<string>();
 
+export const markAsAnimated = (text: string) => {
+  if (text) animatedStrings.add(text);
+};
+
 export const TypewriterText = ({ text, delay = 15, className = '' }: { text: string; delay?: number; className?: string }) => {
   const [displayedText, setDisplayedText] = useState("");
 
@@ -65,6 +69,7 @@ export const ShimmerButton = ({
     <button
       className={`relative overflow-hidden ${className}`}
       disabled={isLoading || disabled}
+      data-loading={isLoading ? "true" : undefined}
       {...props}
     >
       {isLoading && (
@@ -120,7 +125,12 @@ export const EditableField = ({
   textClassName?: string;
 }) => {
   const [isEditing, setIsEditing] = useState(false);
+  const [localValue, setLocalValue] = useState(value);
   const inputRef = useRef<HTMLInputElement & HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    setLocalValue(value);
+  }, [value]);
 
   useEffect(() => {
     if (isEditing && inputRef.current) {
@@ -131,14 +141,21 @@ export const EditableField = ({
     }
   }, [isEditing]);
 
+  const handleBlur = () => {
+    markAsAnimated(localValue);
+    onChange(localValue);
+    setIsEditing(false);
+  };
+
   if (isEditing) {
     if (multiline) {
       return (
         <textarea
           ref={inputRef}
-          value={value}
-          onChange={e => onChange(e.target.value)}
-          onBlur={() => setIsEditing(false)}
+          value={localValue}
+          onChange={e => setLocalValue(e.target.value)}
+          onClick={e => e.stopPropagation()}
+          onBlur={handleBlur}
           className={`w-full bg-slate-900 border border-blue-500/50 outline-none text-slate-200 resize-none font-sans p-2 rounded-md ${className} focus:ring-2 focus:ring-blue-500/20 min-h-[80px]`}
         />
       );
@@ -147,9 +164,10 @@ export const EditableField = ({
       <input
         ref={inputRef}
         type="text"
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        onBlur={() => setIsEditing(false)}
+        value={localValue}
+        onChange={e => setLocalValue(e.target.value)}
+        onClick={e => e.stopPropagation()}
+        onBlur={handleBlur}
         className={`w-full bg-slate-900 border border-blue-500/50 outline-none text-slate-200 font-sans p-2 rounded-md ${className} focus:ring-2 focus:ring-blue-500/20`}
       />
     );
@@ -157,15 +175,105 @@ export const EditableField = ({
 
   return (
     <div 
-      onClick={() => setIsEditing(true)} 
+      onClick={(e) => {
+        e.stopPropagation();
+        setLocalValue(value);
+        setIsEditing(true);
+      }} 
       className={`relative group cursor-pointer -m-2 p-2 rounded-md hover:bg-slate-800/30 transition-colors ${className}`}
     >
       <div className={`whitespace-pre-wrap ${textClassName}`}>
         <TypewriterText text={value} />
       </div>
-      <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 flex items-center gap-1 text-slate-400 bg-slate-800/90 px-1.5 py-0.5 rounded shadow-lg border border-slate-700 pointer-events-none transition-opacity">
-        <span className="text-[9px] uppercase tracking-wider font-bold">click to edit</span>
-        <Pencil className="w-3 h-3" />
+    </div>
+  );
+};
+
+export const EditableListField = ({ 
+  items, 
+  onChange, 
+  className = '',
+  textClassName = '',
+  listType = 'ul'
+}: { 
+  items: string[]; 
+  onChange: (v: string[]) => void; 
+  className?: string;
+  textClassName?: string;
+  listType?: 'ul' | 'ol';
+}) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [localValue, setLocalValue] = useState(items.join('\n'));
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    setLocalValue(items.join('\n'));
+  }, [items]);
+
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      const len = inputRef.current.value.length;
+      inputRef.current.setSelectionRange(len, len);
+    }
+  }, [isEditing]);
+
+  const handleBlur = () => {
+    onChange(localValue.split('\n').filter(s => s.trim() !== ''));
+    setIsEditing(false);
+  };
+
+  if (isEditing) {
+    return (
+      <textarea
+        ref={inputRef}
+        value={localValue}
+        onChange={e => setLocalValue(e.target.value)}
+        onClick={e => e.stopPropagation()}
+        onBlur={handleBlur}
+        className={`w-full bg-slate-900 border border-blue-500/50 outline-none text-slate-200 resize-none font-sans p-2 rounded-md ${className} focus:ring-2 focus:ring-blue-500/20 min-h-[100px]`}
+      />
+    );
+  }
+
+  const ListTag = listType;
+
+  return (
+    <div 
+      onClick={(e) => {
+        e.stopPropagation();
+        setLocalValue(items.join('\n'));
+        setIsEditing(true);
+      }} 
+      className={`relative group cursor-pointer -m-2 p-2 rounded-md hover:bg-slate-800/30 transition-colors ${className}`}
+    >
+      <ListTag className={`pl-5 space-y-1 ${listType === 'ol' ? 'list-decimal' : 'list-disc'} ${textClassName}`}>
+        {items.length > 0 ? items.map((item, i) => (
+          <li key={i} className="pl-1">
+            {/* Using TypewriterText here can be complex if it runs all at once or out of order, 
+                but we can just use normal text to avoid layout jumps or wrap it. */}
+            {item}
+          </li>
+        )) : <span className="opacity-50 italic list-none -ml-5">Empty</span>}
+      </ListTag>
+    </div>
+  );
+};
+
+// --- Tooltip ---
+export const Tooltip = ({ children, content, position = 'bottom', className = 'inline-flex' }: { children: React.ReactNode; content: string; position?: 'top' | 'bottom' | 'left' | 'right', className?: string }) => {
+  const positionClasses = {
+    top: 'bottom-full left-1/2 -translate-x-1/2 mb-2',
+    bottom: 'top-full left-1/2 -translate-x-1/2 mt-2',
+    left: 'right-full top-1/2 -translate-y-1/2 mr-2',
+    right: 'left-full top-1/2 -translate-y-1/2 ml-2',
+  };
+
+  return (
+    <div className={`relative group/tooltip ${className}`}>
+      {children}
+      <div className={`absolute ${positionClasses[position]} w-max max-w-xs px-2 py-1 bg-slate-900 border border-slate-700 text-slate-300 text-[10px] font-sans rounded opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all z-50 overflow-hidden break-words pointer-events-none shadow-lg whitespace-normal leading-tight text-center`}>
+        {content}
       </div>
     </div>
   );

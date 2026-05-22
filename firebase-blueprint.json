@@ -1,0 +1,44 @@
+{
+  "entities": {
+    "CaseFile": {
+      "title": "CaseFile",
+      "description": "Stores a case file extraction or state in the cloud",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "description": "User ID of the owner"
+        },
+        "name": {
+          "type": "string"
+        },
+        "extractedText": {
+          "type": "string"
+        },
+        "industry": {
+          "type": "string"
+        },
+        "coreProblem": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["ownerId", "name", "extractedText"]
+    }
+  },
+  "firestore": {
+    "/cases/{caseId}": {
+      "schema": {
+        "$ref": "#/entities/CaseFile"
+      },
+      "description": "Cases mapped to anonymous users"
+    }
+  }
+}

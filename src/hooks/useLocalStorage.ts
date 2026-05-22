@@ -15,11 +15,14 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
   });
 
   useEffect(() => {
-    try {
-      window.localStorage.setItem(key, JSON.stringify(storedValue));
-    } catch (error) {
-      console.warn(error);
-    }
+    const timeoutId = setTimeout(() => {
+      try {
+        window.localStorage.setItem(key, JSON.stringify(storedValue));
+      } catch (error) {
+        console.warn(error);
+      }
+    }, 500); // 500ms debounce
+    return () => clearTimeout(timeoutId);
   }, [key, storedValue]);
 
   return [storedValue, setStoredValue] as const;
