@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { GoogleGenAI, Type } from "@google/genai";
 import { SCRStructure } from './src/types';
+import rateLimit from 'express-rate-limit';
 
 // Load environment variables based on environment mode
 const appEnv = process.env.APP_ENV || process.env.NODE_ENV || 'development';
@@ -14,6 +15,18 @@ dotenv.config({ path: '.env' });
 
 const app = express();
 app.use(express.json({ limit: '50mb' })); // Support base64 file uploads
+
+// Define rate limiting rule for Gemini API proxy to prevent abuse
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 60, // Limit each IP to 60 requests per window
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  message: { error: 'Too many requests from this IP, please try again after 15 minutes.' }
+});
+
+// Apply rate limiter specifically to the API generation route
+app.use('/api/gemini/generate', apiLimiter);
 
 const PRIMARY_MODEL = 'gemini-flash-latest';
 const FALLBACK_MODELS = ['gemini-3.1-flash-lite'];

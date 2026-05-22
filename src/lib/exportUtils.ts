@@ -1,4 +1,3 @@
-import html2pdf from 'html2pdf.js';
 import { marked } from 'marked';
 import { AppState, IssueTreeNode } from "../types";
 
@@ -173,6 +172,7 @@ export const generateMarkdownExport = (appState: AppState): string => {
 };
 
 export const exportSessionToPdf = async (appState: AppState) => {
+  const html2pdf = (await import('html2pdf.js')).default;
   const md = generateMarkdownExport(appState);
   const htmlContent = await marked.parse(md);
   const container = document.createElement('div');
