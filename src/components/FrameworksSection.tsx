@@ -1,12 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { recommendFrameworks } from '../services/geminiService';
 import { AppState, Framework } from '../types';
+import { EmptyState } from './EmptyState';
 import { ShimmerButton, CyclingLoadingText, TypewriterText } from './MicroInteractions';
 import { Check, Pin } from 'lucide-react';
+import { sounds } from '../lib/sounds';
+
+import { useAppContext } from '../context/AppContext';
 
 type Props = {
-  appState: AppState;
-  setAppState: React.Dispatch<React.SetStateAction<AppState>>;
+  onNext?: () => void;
+  onGoBack?: () => void;
 };
 
 const BORDER_COLORS = [
@@ -18,16 +23,22 @@ const BORDER_COLORS = [
   'border-l-cyan-500'
 ];
 
-export const FrameworksSection: React.FC<Props> = ({ appState, setAppState }) => {
+export const FrameworksSection: React.FC<Props> = ({ onNext, onGoBack }) => {
+  const { appState, setAppState } = useAppContext();
   const [isRecommending, setIsRecommending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (appState.caseGlance?.coreProblem && !appState.frameworks && !isRecommending) {
+      handleRecommend();
+    }
+  }, [appState.caseGlance?.coreProblem]);
 
   const handleRecommend = async () => {
+    sounds.playClick();
     if (!appState.caseGlance) {
-      setError("Please run Case Intake first to structure the problem.");
+      toast.error("Please run Case Intake first to structure the problem.");
       return;
     }
-    setError(null);
     setIsRecommending(true);
     try {
       const result = await recommendFrameworks(
@@ -35,8 +46,9 @@ export const FrameworksSection: React.FC<Props> = ({ appState, setAppState }) =>
         appState.caseGlance.coreProblem
       );
       setAppState(prev => ({ ...prev, frameworks: result }));
+      toast.success("Strategic frameworks recommended!");
     } catch (err: any) {
-      setError("Failed to generate frameworks. " + (err?.message || ""));
+      toast.error("Failed to generate frameworks: " + (err?.message || ""));
     } finally {
       setIsRecommending(false);
     }
@@ -48,9 +60,11 @@ export const FrameworksSection: React.FC<Props> = ({ appState, setAppState }) =>
       const isCurrentlyPinned = active.some(a => a.name === fw.name);
       
       if (isCurrentlyPinned) {
+        sounds.playRemove();
         return { ...prev, activeFrameworks: active.filter(a => a.name !== fw.name) };
       }
       
+      sounds.playAdd();
       if (active.length >= 2) {
         // Either ignore or replace the oldest. Let's replace the oldest.
         return { ...prev, activeFrameworks: [...active.slice(1), fw] };
@@ -102,8 +116,6 @@ export const FrameworksSection: React.FC<Props> = ({ appState, setAppState }) =>
       </div>
 
       <div className="p-6 space-y-6 flex-1 overflow-y-auto custom-scrollbar">
-        {error && <div className="text-red-400 text-xs">{error}</div>}
-
         {appState.activeFrameworks && appState.activeFrameworks.length > 0 && (
           <div className="space-y-3 mb-6 relative">
             <p className="text-[10px] uppercase text-amber-500 font-bold tracking-widest flex items-center gap-1.5">
@@ -125,7 +137,15 @@ export const FrameworksSection: React.FC<Props> = ({ appState, setAppState }) =>
 
         {appState.frameworks ? (
           <div className="space-y-4 pt-2">
-            <p className="text-[10px] uppercase text-slate-500 font-bold">Top Framework Recommendations</p>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 mb-2">
+              <p className="text-[10px] md:text-[11px] uppercase text-slate-500 font-bold tracking-widest">
+                Top Framework Recommendations
+              </p>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#00d4ff]/5 border border-[#00d4ff]/20 text-[#00d4ff]/70 text-[9px] font-bold uppercase tracking-widest animate-[pulse_3s_ease-in-out_infinite]">
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" /></svg>
+                Hover cards to expand & select
+              </div>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
               {appState.frameworks.map((fw, idx) => {
                 const pinned = isPinned(fw.name);
@@ -193,9 +213,41 @@ export const FrameworksSection: React.FC<Props> = ({ appState, setAppState }) =>
               })}
             </div>
           </div>
+        ) : appState.issueTree ? (
+          <div className="h-48 border border-dashed border-slate-800 rounded bg-slate-900/20 flex flex-col items-center justify-center text-slate-600 gap-4">
+            <span className="text-xs uppercase font-bold tracking-widest">
+              Ready to recommend frameworks
+            </span>
+            <ShimmerButton
+              onClick={handleRecommend}
+              disabled={isRecommending}
+              isLoading={isRecommending}
+              className="bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 text-sm uppercase font-bold text-white px-6 py-3 rounded-lg transition-colors"
+            >
+              {isRecommending ? 'Generating...' : 'Recommend Frameworks'}
+            </ShimmerButton>
+          </div>
         ) : (
-          <div className="h-48 border border-dashed border-slate-800 rounded bg-slate-900/20 flex flex-col items-center justify-center text-slate-600">
-            <span className="text-xs uppercase font-bold tracking-widest">Awaiting Frameworks</span>
+          <EmptyState 
+            title="Awaiting Logic Tree"
+            description="You need to build the issue tree first before selecting frameworks."
+            actionLabel="Go to Structure"
+            onAction={onGoBack}
+          />
+        )}
+
+        {appState.activeFrameworks?.length > 0 && onNext && (
+          <div className="flex justify-end pt-4 border-t border-slate-800 mt-6">
+            <button 
+              onClick={() => {
+                sounds.playTransition();
+                if (onNext) onNext();
+              }}
+              className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-2"
+            >
+              Draft Recommendation
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+            </button>
           </div>
         )}
       </div>

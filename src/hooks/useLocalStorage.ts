@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 export function useLocalStorage<T>(key: string, initialValue: T) {
   const [storedValue, setStoredValue] = useState<T>(() => {
@@ -14,13 +14,38 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
     }
   });
 
+  const valueRef = useRef<T>(storedValue);
   useEffect(() => {
-    try {
-      window.localStorage.setItem(key, JSON.stringify(storedValue));
-    } catch (error) {
-      console.warn(error);
-    }
+    valueRef.current = storedValue;
+  }, [storedValue]);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      try {
+        window.localStorage.setItem(key, JSON.stringify(valueRef.current));
+      } catch (error) {
+        console.warn(error);
+      }
+    }, 500); // 500ms debounce
+    return () => clearTimeout(timeoutId);
   }, [key, storedValue]);
+
+  useEffect(() => {
+    const saveToLocalStorage = () => {
+      try {
+        window.localStorage.setItem(key, JSON.stringify(valueRef.current));
+      } catch (error) {
+        console.warn(error);
+      }
+    };
+
+    window.addEventListener('beforeunload', saveToLocalStorage);
+
+    return () => {
+      window.removeEventListener('beforeunload', saveToLocalStorage);
+      saveToLocalStorage(); // Synchronously save on unmount
+    };
+  }, [key]);
 
   return [storedValue, setStoredValue] as const;
 }

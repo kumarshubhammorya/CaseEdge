@@ -1,0 +1,159 @@
+import React, { useState } from "react";
+import { toast } from "sonner";
+import { strengthenRecommendation, generateStoryHook } from "../services/geminiService";
+import { ShimmerButton, EditableField } from "./MicroInteractions";
+import { sounds } from '../lib/sounds';
+import { Mic, RefreshCw } from "lucide-react";
+import { useAppContext } from '../context/AppContext';
+import { SCRStructure } from "../types";
+
+export const SCRStructureEditor: React.FC = () => {
+  const { appState, setAppState } = useAppContext();
+  const [isStrengthening, setIsStrengthening] = useState(false);
+  const [isHooking, setIsHooking] = useState(false);
+
+  const handleStrengthen = async () => {
+    sounds.playClick();
+    if (!appState.expandedRecommendation) return;
+    setIsStrengthening(true);
+    try {
+      const result = await strengthenRecommendation(
+        appState.expandedRecommendation,
+      );
+      setAppState((prev) => ({ ...prev, expandedRecommendation: result }));
+      toast.success("Recommendation strengthened!");
+    } catch (err: any) {
+      toast.error("Failed to strengthen recommendation: " + (err?.message || ""));
+    } finally {
+      setIsStrengthening(false);
+    }
+  };
+
+  const handleStoryHook = async () => {
+    sounds.playClick();
+    if (!appState.coreRecommendation) return;
+    setIsHooking(true);
+    try {
+      const result = await generateStoryHook(appState.coreRecommendation, appState.expandedRecommendation);
+      setAppState(prev => ({ ...prev, storyHook: result }));
+      toast.success("Storytelling hook drafted!");
+    } catch (err: any) {
+      toast.error("Failed to generate hook: " + (err?.message || ""));
+    } finally {
+      setIsHooking(false);
+    }
+  };
+
+  const updateSCR = (field: keyof SCRStructure, value: string) => {
+    if (!appState.expandedRecommendation) return;
+    setAppState((prev) => ({
+      ...prev,
+      expandedRecommendation: {
+        ...prev.expandedRecommendation!,
+        [field]: value,
+      },
+    }));
+  };
+
+  if (!appState.expandedRecommendation) return null;
+
+  return (
+    <div className="space-y-3 pt-2 animate-in fade-in">
+      <div className="flex justify-between items-end">
+        <p className="text-[10px] uppercase text-slate-500 font-bold">
+          Recommendation (SCR Format)
+        </p>
+        <ShimmerButton
+          onClick={handleStrengthen}
+          disabled={isStrengthening}
+          isLoading={isStrengthening}
+          className="text-[10px] bg-blue-600/20 hover:bg-blue-600/30 disabled:opacity-50 text-blue-400 border border-blue-900/50 px-3 py-1.5 rounded font-bold transition-colors uppercase tracking-widest"
+        >
+          {isStrengthening ? "Strengthening..." : "Strengthen This"}
+        </ShimmerButton>
+      </div>
+      <div className="p-4 border border-slate-800 bg-slate-900/80 rounded-lg space-y-4">
+        <div className="flex items-start">
+          <span className="text-[10px] font-mono text-blue-500 mt-1 mr-3 w-4">
+            S:
+          </span>
+          <div className="flex-1">
+            <EditableField
+              value={appState.expandedRecommendation.situation}
+              onChange={(val) => updateSCR("situation", val)}
+              multiline
+              className="p-1 -m-1"
+              textClassName="text-sm italic text-slate-400"
+            />
+          </div>
+        </div>
+        <div className="flex items-start">
+          <span className="text-[10px] font-mono text-blue-500 mt-1 mr-3 w-4">
+            C:
+          </span>
+          <div className="flex-1">
+            <EditableField
+              value={appState.expandedRecommendation.complication}
+              onChange={(val) => updateSCR("complication", val)}
+              multiline
+              className="p-1 -m-1"
+              textClassName="text-sm italic text-slate-400"
+            />
+          </div>
+        </div>
+        <div className="flex items-start">
+          <span className="text-[10px] font-mono text-blue-500 mt-1 mr-3 w-4">
+            R:
+          </span>
+          <div className="flex-1">
+            <EditableField
+              value={appState.expandedRecommendation.resolution}
+              onChange={(val) => updateSCR("resolution", val)}
+              multiline
+              className="p-1 -m-1"
+              textClassName="text-sm font-semibold text-white"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="pt-2 flex flex-col gap-3">
+        {!appState.storyHook ? (
+          <ShimmerButton
+            onClick={handleStoryHook}
+            disabled={isHooking}
+            isLoading={isHooking}
+            className="self-start text-[10px] bg-amber-500/10 hover:bg-amber-500/20 disabled:opacity-50 text-amber-500 border border-amber-500/30 px-3 py-1.5 rounded font-bold transition-colors flex items-center gap-1.5 uppercase tracking-widest"
+          >
+            <Mic className="w-3 h-3" />
+            {isHooking ? "Coaching..." : "Storytelling Coach"}
+          </ShimmerButton>
+        ) : (
+          <div className="p-4 border border-amber-500/40 bg-amber-500/5 rounded-lg space-y-3 relative group">
+            <div className="flex items-center gap-2 mb-2">
+              <Mic className="w-4 h-4 text-amber-500" />
+              <p className="text-[10px] text-amber-500 font-bold uppercase tracking-widest">
+                The 60-Second Hook
+              </p>
+            </div>
+            <EditableField
+              value={appState.storyHook}
+              onChange={(val) => setAppState(prev => ({ ...prev, storyHook: val }))}
+              multiline
+              textClassName="text-slate-200 text-sm leading-relaxed italic font-serif"
+            />
+            <ShimmerButton
+              onClick={handleStoryHook}
+              disabled={isHooking}
+              isLoading={isHooking}
+              className="absolute top-3 right-3 text-[10px] bg-amber-500/20 hover:bg-amber-500/30 text-amber-500 px-2 py-1 rounded font-bold transition-colors flex items-center gap-1 uppercase opacity-0 group-hover:opacity-100"
+            >
+              <RefreshCw className={`w-3 h-3 ${isHooking ? 'animate-spin' : ''}`} />
+              {isHooking ? "Regenerating..." : "Regenerate angle"}
+            </ShimmerButton>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};

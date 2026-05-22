@@ -1,1 +1,30 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700;800&family=Syne:wght@600;700;800&display=swap');
 @import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", sans-serif;
+  --font-heading: "Syne", sans-serif;
+  --font-mono: "DM Mono", monospace;
+  
+  --color-bg-dark: #111318;
+  --color-cyan-glow: rgba(0, 212, 255, 0.15);
+}
+
+@layer utilities {
+  .bg-grid-pattern {
+    background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+    background-size: 32px 32px;
+    animation: driftUp 30s linear infinite;
+  }
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+@keyframes driftUp {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 -32px; }
+}
