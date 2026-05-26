@@ -2,12 +2,27 @@ import express from 'express';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import crypto from 'crypto';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 import { GoogleGenAI, Type } from "@google/genai";
 import { SCRStructure } from './src/types';
 import rateLimit from 'express-rate-limit';
+
+interface CacheEntry {
+  data: any;
+  expiry: number;
+}
+
+const apiCache = new Map<string, CacheEntry>();
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+function getCacheKey(action: string, args: any[]): string {
+  const payload = JSON.stringify({ action, args });
+  return crypto.createHash('sha256').update(payload).digest('hex');
+}
+
 
 // Load environment variables based on environment mode
 const appEnv = process.env.APP_ENV || process.env.NODE_ENV || 'development';
@@ -678,8 +693,22 @@ app.post('/api/gemini/generate', async (req, res) => {
     return res.status(400).json({ error: `Unknown action: ${action}` });
   }
 
+  const cacheKey = getCacheKey(action, args || []);
+  const now = Date.now();
+  const cached = apiCache.get(cacheKey);
+
+  if (cached && cached.expiry > now) {
+    console.log(`[Cache Hit] Action: ${action} (Key: ${cacheKey.substring(0, 8)})`);
+    return res.json({ result: cached.data });
+  }
+
   try {
     const result = await actions[action](...(args || []));
+    apiCache.set(cacheKey, {
+      data: result,
+      expiry: now + CACHE_TTL_MS
+    });
+    console.log(`[Cache Miss/Set] Action: ${action} (Key: ${cacheKey.substring(0, 8)})`);
     res.json({ result });
   } catch (error: any) {
     console.error(`Error in action ${action}:`, error);
