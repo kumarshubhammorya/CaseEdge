@@ -142,29 +142,14 @@ async function extractCaseFromFile(base64Data: string, mimeType: string) {
           mimeType: mimeType
         }
       },
-      { text: "Extract the full case brief from this document, preserving and enhancing its structure with proper markdown formatting (headings, subheadings, bullet points, and blank lines to separate paragraphs). Do this thoughtfully so it is very readable. Then analyze it: identify Industry, Core Problem, Key Stakeholders, Constraints, Case Type, and 3-5 critical clarifying questions. Respond in JSON. Put the beautifully formatted extracted text in a field called 'extractedText'." }
+      { text: "Extract the full case brief from this document, preserving and enhancing its structure with proper markdown formatting (headings, subheadings, bullet points, and blank lines to separate paragraphs) so it is extremely readable. Respond strictly in JSON format matching the schema." }
     ],
     {
       type: Type.OBJECT,
       properties: {
-        extractedText: { type: Type.STRING },
-        industry: { type: Type.STRING },
-        coreProblem: { type: Type.STRING },
-        keyStakeholders: { 
-          type: Type.ARRAY,
-          items: { type: Type.STRING }
-        },
-        keyConstraints: { 
-          type: Type.ARRAY,
-          items: { type: Type.STRING }
-        },
-        caseType: { type: Type.STRING },
-        clarifyingQuestions: {
-          type: Type.ARRAY,
-          items: { type: Type.STRING }
-        }
+        extractedText: { type: Type.STRING }
       },
-      required: ["extractedText", "industry", "coreProblem", "keyStakeholders", "keyConstraints", "caseType", "clarifyingQuestions"]
+      required: ["extractedText"]
     }
   );
 }
@@ -172,29 +157,14 @@ async function extractCaseFromFile(base64Data: string, mimeType: string) {
 async function extractCaseFromText(text: string) {
   return await safeGenAI(
     [
-      { text: "Extract and enhance the full case brief from the following text (which was OCR'd from a document), preserving and enhancing its structure with proper markdown formatting (headings, subheadings, bullet points, and blank lines to separate paragraphs). Do this thoughtfully so it is very readable. Then analyze it: identify Industry, Core Problem, Key Stakeholders, Constraints, Case Type, and 3-5 critical clarifying questions. Respond in JSON. Put the beautifully formatted extracted text in a field called 'extractedText'.\n\nRaw Text:\n" + text }
+      { text: "Format and clean the following text (which was OCR'd from a document) into a beautiful and readable case brief. Enhance its structure using proper markdown formatting (headings, subheadings, bullet points, and blank lines to separate paragraphs). Respond strictly in JSON format matching the schema.\n\nRaw Text:\n" + text }
     ],
     {
       type: Type.OBJECT,
       properties: {
-        extractedText: { type: Type.STRING },
-        industry: { type: Type.STRING },
-        coreProblem: { type: Type.STRING },
-        keyStakeholders: { 
-          type: Type.ARRAY,
-          items: { type: Type.STRING }
-        },
-        keyConstraints: { 
-          type: Type.ARRAY,
-          items: { type: Type.STRING }
-        },
-        caseType: { type: Type.STRING },
-        clarifyingQuestions: {
-          type: Type.ARRAY,
-          items: { type: Type.STRING }
-        }
+        extractedText: { type: Type.STRING }
       },
-      required: ["extractedText", "industry", "coreProblem", "keyStakeholders", "keyConstraints", "caseType", "clarifyingQuestions"]
+      required: ["extractedText"]
     }
   );
 }
@@ -338,7 +308,9 @@ async function draftRecommendation(coreRecommendation: string) {
 async function simulateQA(recommendation: string) {
   const result = await safeGenAI(
     [
-      { text: "You are a tough but fair MBA competition judge. Generate 5 hard questions a judge would ask about this recommendation. For each, provide a model answer. Be realistic and challenging. Respond strictly in English. Respond in JSON." },
+      { text: "You are a tough but fair MBA competition judge. Generate 5 hard questions a judge would ask about this recommendation. " +
+              "For each question, provide: (1) the question, (2) a detailed model answer, and (3) a custom self-assessment rubric (an array of exactly 3-4 grading criteria starting with 'Did you...' for the student to rate their own response against). " +
+              "Be highly realistic, critical, and challenging. Respond strictly in English. Respond in JSON." },
       { text: `Recommendation:\n${recommendation}` }
     ],
     {
@@ -350,9 +322,13 @@ async function simulateQA(recommendation: string) {
             type: Type.OBJECT,
             properties: {
               question: { type: Type.STRING },
-              modelAnswer: { type: Type.STRING }
+              modelAnswer: { type: Type.STRING },
+              rubric: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING }
+              }
             },
-            required: ["question", "modelAnswer"]
+            required: ["question", "modelAnswer", "rubric"]
           }
         }
       },
@@ -541,6 +517,129 @@ async function extractAssumptions(recommendationText: string) {
   return result?.assumptions || [];
 }
 
+async function evaluateIssueTree(issueTreeJson: string, coreProblem: string) {
+  return await safeGenAI(
+    [
+      { text: "You are an elite McKinsey Case Coach auditing a candidate's logic tree for a case interview. " +
+              "Review their proposed issue tree below for the given core problem. " +
+              "Determine if it is Mutually Exclusive and Collectively Exhaustive (MECE). " +
+              "Calculate a MECE score out of 100 based on structure, logical separation, and completeness. " +
+              "Provide overall summary feedback, list any major structural gaps (missing branches), and overlaps (redundant or non-mutually exclusive branches). " +
+              "Additionally, look closely at individual nodes in the tree. For any node that is poorly defined, duplicate, not MECE, or could be improved, provide specific, concise feedback linked to its nodeId. " +
+              "Respond strictly in English. Respond in JSON matching the schema." },
+      { text: `Core Problem: ${coreProblem}\n\nProposed Issue Tree (JSON Structure):\n${issueTreeJson}` }
+    ],
+    {
+      type: Type.OBJECT,
+      properties: {
+        score: { type: Type.INTEGER },
+        isMECE: { type: Type.BOOLEAN },
+        meceSummary: { type: Type.STRING },
+        structuralGaps: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING }
+        },
+        overlaps: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING }
+        },
+        nodeFeedback: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              nodeId: { type: Type.STRING },
+              feedback: { type: Type.STRING },
+              severity: { type: Type.STRING, enum: ["warning", "info"] }
+            },
+            required: ["nodeId", "feedback", "severity"]
+          }
+        }
+      },
+      required: ["score", "isMECE", "meceSummary", "structuralGaps", "overlaps", "nodeFeedback"]
+    }
+  );
+}
+
+async function evaluateIntake(caseBrief: string, userCluesJson: string) {
+  return await safeGenAI(
+    [
+      { text: "You are an expert McKinsey Case Interview Coach. " +
+              "A candidate has read the business case brief below and highlighted specific clues, categorizing them into: objective, constraint, stakeholder, or metric. " +
+              "Audit their highlighted clues. Calculate a reading comprehension score out of 100. " +
+              "Provide a constructive summary. Identify what major elements they successfully highlighted (correctClues) and what critical elements in the case brief they missed or miscategorized (missingClues). " +
+              "Be highly precise and pedagogical. Respond strictly in English. Respond in JSON matching the schema." },
+      { text: `Case Brief:\n${caseBrief}\n\nCandidate's Highlights (JSON):\n${userCluesJson}` }
+    ],
+    {
+      type: Type.OBJECT,
+      properties: {
+        score: { type: Type.INTEGER },
+        summary: { type: Type.STRING },
+        missingClues: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING }
+        },
+        correctClues: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING }
+        }
+      },
+      required: ["score", "summary", "missingClues", "correctClues"]
+    }
+  );
+}
+
+async function evaluateFrameworks(proposedFrameworks: string, caseBrief: string, caseGlanceJson: string) {
+  return await safeGenAI(
+    [
+      { text: "You are an elite business case coach. " +
+              "Based on the case brief and core problem details below, the student has proposed a set of frameworks, hypotheses, or analytical approaches. " +
+              "Provide a detailed, professional critique comparing their proposal to the gold-standard frameworks. " +
+              "Calculate a score out of 100 for their proposed reasoning. " +
+              "Additionally, recommend exactly 3 tailored frameworks that fits this case (each with name, whyItFits, and 3 key diagnostic questions) which will be revealed as the model answer. " +
+              "Be constructive but direct. Respond strictly in English. Respond in JSON matching the schema." },
+      { text: `Case Brief:\n${caseBrief}\n\nCase Glance Data:\n${caseGlanceJson}\n\nStudent's Proposed Frameworks:\n${proposedFrameworks}` }
+    ],
+    {
+      type: Type.OBJECT,
+      properties: {
+        score: { type: Type.INTEGER },
+        feedback: { type: Type.STRING },
+        frameworks: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              name: { type: Type.STRING },
+              whyItFits: { type: Type.STRING },
+              diagnosticQuestions: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING }
+              }
+            },
+            required: ["name", "whyItFits", "diagnosticQuestions"]
+          }
+        }
+      },
+      required: ["score", "feedback", "frameworks"]
+    }
+  );
+}
+
+async function getFrameworkHint(caseBrief: string, caseGlanceJson: string, proposedFrameworks: string, hintsCount: number) {
+  return await safeGenAI(
+    [
+      { text: "You are a Socratic case coach. " +
+              "Given the case brief, core problem, and the proposed frameworks the student has entered so far, provide a subtle, leading hint. " +
+              "Do NOT give away the answer or name the recommended frameworks (like Profitability, 3Cs, Porter's 5 Forces) directly. " +
+              "Instead, ask a guiding question or point to a specific dimension in the case brief they should think about. " +
+              "Keep the hint very concise (under 25 words). This is hint number " + (hintsCount + 1) + ". Respond strictly in plain text in English." },
+      { text: `Case Brief:\n${caseBrief}\n\nCase Glance:\n${caseGlanceJson}\n\nProposed Logic So Far:\n${proposedFrameworks || 'None yet'}` }
+    ]
+  );
+}
+
 const actions: Record<string, Function> = {
   extractCaseFromFile,
   extractCaseFromText,
@@ -558,6 +657,10 @@ const actions: Record<string, Function> = {
   generateSlideOutline,
   strengthenRecommendation,
   extractAssumptions,
+  evaluateIssueTree,
+  evaluateIntake,
+  evaluateFrameworks,
+  getFrameworkHint,
 };
 
 app.get('/health', (req, res) => {

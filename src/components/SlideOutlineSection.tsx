@@ -23,12 +23,6 @@ export const SlideOutlineSection = ({ onNext, onGoBack }: Props) => {
   const [isExporting, setIsExporting] = useState(false);
   const [exportUrl, setExportUrl] = useState<string | null>(null);
 
-  useEffect(() => {
-    if ((appState.coreRecommendation || appState.expandedRecommendation?.resolution) && !appState.slideOutline && !isGenerating) {
-      handleGenerate();
-    }
-  }, [appState.coreRecommendation, appState.expandedRecommendation?.resolution]);
-
   const handleGenerate = async () => {
     sounds.playClick();
     if (!appState.coreRecommendation && !appState.expandedRecommendation?.resolution) {

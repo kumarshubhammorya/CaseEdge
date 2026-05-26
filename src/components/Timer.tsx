@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Play, Pause, RotateCcw } from 'lucide-react';
 import { sounds } from '../lib/sounds';
 import { Tooltip } from './MicroInteractions';
+import { useAppContext } from '../context/AppContext';
 
 type Props = {
   onExport: () => Promise<void>;
@@ -9,6 +10,7 @@ type Props = {
 };
 
 export const Timer = ({ onExport, onReset }: Props) => {
+  const { appState } = useAppContext();
   const [duration, setDuration] = useState<number>(30 * 60); // setup 30 mins default
   const [timeLeft, setTimeLeft] = useState<number>(30 * 60);
   const [isRunning, setIsRunning] = useState<boolean>(false);
@@ -97,6 +99,15 @@ export const Timer = ({ onExport, onReset }: Props) => {
       </div>
       
       <div className="flex items-center gap-1.5 sm:gap-6 min-w-0">
+        <div className="flex flex-col items-end border-l border-slate-800 pl-4 sm:pl-6 shrink-0">
+          <span className="text-[10px] uppercase text-slate-500 font-bold tracking-widest hidden sm:block">AI Balance</span>
+          <div className="flex items-center gap-1.5 sm:gap-2 sm:-mt-1 h-6">
+            <span className="text-xs sm:text-sm font-extrabold text-cyan-400 select-none">
+              🪙 {appState.tokens ?? 0}
+            </span>
+          </div>
+        </div>
+
         <div className="flex flex-col items-end border-r-0 border-l-0 sm:border-l border-slate-800 sm:pl-6 sm:border-r pr-2 sm:pr-6 shrink-0">
           <span className="text-[10px] uppercase text-slate-500 font-bold tracking-widest hidden sm:block">Remaining Time</span>
           <div className="flex items-center gap-1.5 sm:gap-2 sm:-mt-1">

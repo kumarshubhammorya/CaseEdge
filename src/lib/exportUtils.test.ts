@@ -24,6 +24,7 @@ vi.mock('marked', () => {
 });
 
 const mockAppState: AppState = {
+  tokens: 50,
   caseBrief: "European profitability decline case study.",
   caseGlance: {
     industry: "Consumer Electronics",

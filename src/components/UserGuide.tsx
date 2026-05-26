@@ -17,51 +17,51 @@ export const UserGuide: React.FC<UserGuideProps> = ({ onClose }) => {
   const guideSteps = [
     {
       title: "Welcome to CaseEdge!",
-      desc: "This app helps you crack business cases (like fixing a struggling company) in just 30 minutes. It's built for MBA students, but it's simple enough for anyone to use. Let's see how it works!",
+      desc: "This app helps you crack business cases in just 30 minutes. Earn 🪙 tokens by completing active learning tasks, and spend them to bypass steps when pressed for time. Let's see how it works!",
       icon: BookOpen,
       color: "text-blue-400"
     },
     {
-      title: "Step 1: The Intake",
-      desc: "Paste the text or upload a document describing the business problem. Our AI reads it and extracts the Core Problem, Industry, and Key Stakeholders, giving you a quick summary.",
+      title: "Step 1: Active Reading & Intake",
+      desc: "Highlight case text to tag key details under Objectives, Constraints, Stakeholders, or Metrics. Run a Highlight Audit to earn tokens and unlock Case at a Glance.",
       icon: BrainCircuit,
       color: "text-cyan-400"
     },
     {
-      title: "Step 2: Issue Tree & MECE",
-      desc: "We break the big problem into smaller, easy-to-solve pieces (like branches on a tree). We use \"MECE\" (Mutually Exclusive, Collectively Exhaustive) — meaning the pieces don't overlap, and together they cover everything.",
+      title: "Step 2: Issue Tree Playground",
+      desc: "Construct problem causal trees manually in the sandboxed playground. Run MECE logic audits to check for overlaps/gaps and unlock the AI-suggested Issue Tree for free.",
       icon: Network,
       color: "text-emerald-400"
     },
     {
-      title: "Step 3: Frameworks",
-      desc: "We give you famous business \"Frameworks\" — these are tried-and-tested standard models (like the 4 Ps or Porter's Five Forces) to help you analyze the problem from the right angles.",
+      title: "Step 3: Socratic Frameworks",
+      desc: "Submit your strategic logic proposals in the Socratic Critique Guide to get hints and unlock the AI Recommended Frameworks for free.",
       icon: Grid,
       color: "text-teal-400"
     },
     {
-      title: "Step 4: The SCR Drafter",
-      desc: "Write your solution like a story using the \"SCR\" method: Situation (what is happening), Complication (what went wrong), and Resolution (how we fix it). It structures your recommendation clearly.",
+      title: "Step 4: SCR Recommendation",
+      desc: "Draft top-down proposals (Situation, Complication, Resolution) using structured consulting templates (Scaffold Chips). Get AI drafting hints for 5 🪙.",
       icon: CheckCircle,
       color: "text-orange-400"
     },
     {
-      title: "Step 5: Quantify",
-      desc: "Back up your idea with numbers. We estimate \"TAM\" (Total Addressable Market - how big the opportunity is), \"Payback Period\" (how long to make the money back), and \"KPIs\" (Key Performance Indicators - metrics to track success).",
+      title: "Step 5: Assumptions & Risks",
+      desc: "Isolate unproven variables and risk assumptions. Spend 5 🪙 to automatically extract potential assumptions from your drafted recommendation.",
+      icon: AlertTriangle,
+      color: "text-rose-400"
+    },
+    {
+      title: "Step 6: Financial Quantification",
+      desc: "Input quick sizing and payback estimates. Build confidence in your figures using the gated AI Quantification Assistant (Costs 5 🪙).",
       icon: Zap,
       color: "text-amber-400"
     },
     {
-      title: "Step 6: Pitch & Judge Q&A",
-      desc: "Finally, prepare your presentation. We give you a slide-by-slide Outline and simulate \"Judge Q&A\" to help you practice answering tough questions a jury might ask you.",
+      title: "Step 7: Pitch & Judge Q&A",
+      desc: "Review structured slide decks and prepare for judge grilling. Self-calibrate your answers against grading checklists to unlock model answers.",
       icon: Presentation,
       color: "text-purple-400"
-    },
-    {
-      title: "Bonus: Assumptions Tracker",
-      desc: "Whenever you make a guess or rely on unproven data, track it! Use the Assumptions feature to manage risks like market shifts or high costs, so you're not caught off guard.",
-      icon: AlertTriangle,
-      color: "text-rose-400"
     }
   ];
 

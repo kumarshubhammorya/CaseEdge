@@ -1,82 +1,36 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
-import { buildIssueTree } from '../services/geminiService';
-import { AppState, IssueTreeNode } from '../types';
-import { Network, Brain, ChevronRight, ChevronDown } from 'lucide-react';
+import { buildIssueTree, evaluateIssueTree } from '../services/geminiService';
+import { AppState, IssueTreeNode, NodeFeedbackItem } from '../types';
 import { EmptyState } from './EmptyState';
-import { ShimmerButton, CyclingLoadingText, EditableField, TypewriterText, Tooltip } from './MicroInteractions';
+import { ShimmerButton, CyclingLoadingText, Tooltip } from './MicroInteractions';
 import { sounds } from '../lib/sounds';
+import { TreeNode } from './issuetree/TreeNode';
+import { MECECoachPanel } from './issuetree/MECECoachPanel';
+import { AITreeLockedView } from './issuetree/AITreeLockedView';
 
 import { useAppContext } from '../context/AppContext';
 
-type Props = {
-  onNext?: () => void;
-  onGoBack?: () => void;
-};
+const generateUniqueId = () => `node_${Math.random().toString(36).substring(2, 11)}`;
 
-const TreeNode: React.FC<{ node: IssueTreeNode; level: number; onUpdateText: (id: string, text: string) => void }> = ({ node, level, onUpdateText }) => {
-  const [expanded, setExpanded] = useState(true);
-  const hasChildren = node.children && node.children.length > 0;
 
-  return (
-    <div className="w-full">
-      <div 
-        className="flex items-center p-2 rounded-md transition-colors w-full group relative"
-        style={{ paddingLeft: `${level * 1.5 + 0.5}rem` }}
-      >
-        <div 
-          className="w-6 flex justify-center mr-1 cursor-pointer"
-          onClick={() => {
-            if (hasChildren) {
-              sounds.playHover();
-              setExpanded(!expanded);
-            }
-          }}
-        >
-          {hasChildren ? (
-            expanded ? (
-              <ChevronDown className="w-4 h-4 text-slate-400 hover:text-slate-200" />
-            ) : (
-              <ChevronRight className="w-4 h-4 text-slate-400 hover:text-slate-200" />
-            )
-          ) : (
-            <div className="w-1.5 h-1.5 rounded-full bg-slate-600" />
-          )}
-        </div>
-        <div className="flex-1">
-          <EditableField 
-            value={node.label} 
-            onChange={(val) => onUpdateText(node.id, val)}
-            className="w-auto inline-block m-0 p-1 bg-transparent hover:bg-slate-800/30"
-            textClassName={`text-sm ${level === 0 ? 'font-bold text-blue-400' : level === 1 ? 'font-semibold text-slate-200' : 'text-slate-400'}`}
-          />
-        </div>
-      </div>
-      
-      {expanded && hasChildren && (
-        <div className="flex flex-col relative w-full">
-          <div 
-            className="absolute left-0 top-0 bottom-0 w-px bg-slate-800/80"
-            style={{ left: `${level * 1.5 + 1.25}rem` }}
-          />
-          {node.children!.map((child) => (
-            <TreeNode key={child.id} node={child} level={level + 1} onUpdateText={onUpdateText} />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
-
-export const IssueTreeSection: React.FC<Props> = ({ onNext, onGoBack }) => {
+export const IssueTreeSection: React.FC<{ onNext?: () => void; onGoBack?: () => void }> = ({ onNext, onGoBack }) => {
   const { appState, setAppState } = useAppContext();
   const [isBuilding, setIsBuilding] = useState(false);
+  const [isAuditing, setIsAuditing] = useState(false);
 
   useEffect(() => {
-    if (appState.caseGlance?.coreProblem && !appState.issueTree && !isBuilding) {
-      handleBuild();
+    if (appState.caseGlance?.coreProblem && !appState.playgroundTree) {
+      setAppState(prev => ({
+        ...prev,
+        playgroundTree: {
+          id: 'root',
+          label: appState.caseGlance!.coreProblem,
+          children: []
+        }
+      }));
     }
-  }, [appState.caseGlance?.coreProblem]);
+  }, [appState.caseGlance?.coreProblem, appState.playgroundTree]);
 
   const handleBuild = async () => {
     sounds.playClick();
@@ -90,6 +44,36 @@ export const IssueTreeSection: React.FC<Props> = ({ onNext, onGoBack }) => {
       setAppState(prev => ({ ...prev, issueTree: result }));
       toast.success("Issue tree built successfully!");
     } catch (err: any) {
+      toast.error("Failed to build issue tree: " + (err?.message || ""));
+    } finally {
+      setIsBuilding(false);
+    }
+  };
+
+  const handleUnlockAITree = async () => {
+    sounds.playClick();
+    if (!appState.caseGlance || !appState.caseGlance.coreProblem) {
+      toast.error("Please run Case Intake first to extract the core problem.");
+      return;
+    }
+    const hasMeceAudit = !!appState.meceFeedback;
+    const isBypass = !appState.issueTree && !hasMeceAudit;
+    if (isBypass) {
+      if ((appState.tokens ?? 0) < 10) {
+        sounds.playError();
+        toast.error("Insufficient tokens! Build and audit your own tree in the Interactive Playground, or earn more tokens.");
+        return;
+      }
+      setAppState(prev => ({ ...prev, tokens: Math.max(0, (prev.tokens ?? 50) - 10) }));
+    }
+    setIsBuilding(true);
+    try {
+      const result = await buildIssueTree(appState.caseGlance.coreProblem);
+      setAppState(prev => ({ ...prev, issueTree: result }));
+      sounds.playSuccess();
+      toast.success(isBypass ? "AI Issue Tree generated! (-10 tokens)" : "AI Issue Tree generated!");
+    } catch (err: any) {
+      sounds.playError();
       toast.error("Failed to build issue tree: " + (err?.message || ""));
     } finally {
       setIsBuilding(false);
@@ -110,9 +94,165 @@ export const IssueTreeSection: React.FC<Props> = ({ onNext, onGoBack }) => {
   };
 
   const handleUpdateText = (id: string, text: string) => {
-    if (!appState.issueTree) return;
-    setAppState(prev => ({ ...prev, issueTree: updateNodeLabel(prev.issueTree!, id, text) }));
+    if (appState.issueTreeMode === 'playground') {
+      if (!appState.playgroundTree) return;
+      setAppState(prev => ({
+        ...prev,
+        playgroundTree: updateNodeLabel(prev.playgroundTree!, id, text),
+        meceFeedback: null // Clear outdated audit feedback
+      }));
+    } else {
+      if (!appState.issueTree) return;
+      setAppState(prev => ({ 
+        ...prev, 
+        issueTree: updateNodeLabel(prev.issueTree!, id, text) 
+      }));
+    }
   };
+
+  const handleAddChild = (parentId: string) => {
+    sounds.playClick();
+    const newChild: IssueTreeNode = {
+      id: generateUniqueId(),
+      label: 'New Sub-issue',
+      children: []
+    };
+
+    const addNode = (node: IssueTreeNode): IssueTreeNode => {
+      if (node.id === parentId) {
+        return {
+          ...node,
+          children: [...(node.children || []), newChild]
+        };
+      }
+      if (node.children) {
+        return {
+          ...node,
+          children: node.children.map(addNode)
+        };
+      }
+      return node;
+    };
+
+    if (appState.playgroundTree) {
+      setAppState(prev => ({
+        ...prev,
+        playgroundTree: addNode(prev.playgroundTree!),
+        meceFeedback: null
+      }));
+      toast.success("Sub-issue added!");
+    }
+  };
+
+  const handleDeleteNode = (nodeId: string) => {
+    sounds.playRemove();
+    const removeNode = (node: IssueTreeNode): IssueTreeNode | null => {
+      if (node.id === nodeId) {
+        return null;
+      }
+      if (node.children) {
+        return {
+          ...node,
+          children: node.children
+            .map(removeNode)
+            .filter((n): n is IssueTreeNode => n !== null)
+        };
+      }
+      return node;
+    };
+
+    if (appState.playgroundTree) {
+      const updated = removeNode(appState.playgroundTree);
+      setAppState(prev => ({
+        ...prev,
+        playgroundTree: updated,
+        meceFeedback: null
+      }));
+      toast.info("Sub-issue removed");
+    }
+  };
+
+  const handleResetPlayground = () => {
+    sounds.playClick();
+    setAppState(prev => ({
+      ...prev,
+      playgroundTree: {
+        id: 'root',
+        label: appState.caseGlance?.coreProblem || 'Core Problem',
+        children: []
+      },
+      meceFeedback: null
+    }));
+    toast.info("Playground tree reset");
+  };
+
+  const handleInitializeFromAI = () => {
+    sounds.playSuccess();
+    if (!appState.issueTree) {
+      toast.error("Generate an AI Tree first!");
+      return;
+    }
+    // Deep copy current AI tree
+    const copyTree = JSON.parse(JSON.stringify(appState.issueTree));
+    setAppState(prev => ({
+      ...prev,
+      playgroundTree: copyTree,
+      meceFeedback: null
+    }));
+    toast.success("AI Tree copied to Playground!");
+  };
+
+  const handleAudit = async () => {
+    sounds.playClick();
+    if (!appState.playgroundTree) {
+      toast.error("Playground tree is empty!");
+      return;
+    }
+    setIsAuditing(true);
+    try {
+      const issueTreeJson = JSON.stringify(appState.playgroundTree);
+      const result = await evaluateIssueTree(issueTreeJson, appState.caseGlance?.coreProblem || '');
+      
+      const oldScore = appState.meceFeedback?.score ?? 0;
+      const newScore = result.score ?? 0;
+      let reward = 0;
+      if (oldScore < 80 && newScore >= 80) {
+        reward = oldScore > 0 ? 3 : 5;
+      } else if (oldScore === 0) {
+        reward = newScore >= 80 ? 5 : 2;
+      }
+      
+      setAppState(prev => ({ 
+        ...prev, 
+        meceFeedback: result,
+        tokens: (prev.tokens ?? 50) + reward
+      }));
+      sounds.playSuccess();
+      if (reward > 0) {
+        toast.success(`MECE audit completed! Earned +${reward} tokens.`);
+      } else {
+        toast.success("MECE audit completed!");
+      }
+    } catch (err: any) {
+      sounds.playError();
+      toast.error("Failed to run MECE audit: " + (err?.message || ""));
+    } finally {
+      setIsAuditing(false);
+    }
+  };
+
+  const nodeFeedbackMap = useMemo(() => {
+    const map: { [nodeId: string]: NodeFeedbackItem } = {};
+    if (appState.meceFeedback?.nodeFeedback) {
+      appState.meceFeedback.nodeFeedback.forEach((item) => {
+        map[item.nodeId] = item;
+      });
+    }
+    return map;
+  }, [appState.meceFeedback]);
+
+  const isPlayground = appState.issueTreeMode === 'playground';
+  const activeTree = isPlayground ? appState.playgroundTree : appState.issueTree;
 
   const loadingMessages = [
     "Parsing main problem...", 
@@ -123,19 +263,28 @@ export const IssueTreeSection: React.FC<Props> = ({ onNext, onGoBack }) => {
 
   return (
     <section className="bg-[#0f172a] flex flex-col flex-1 min-h-0 border border-slate-800 animate-in fade-in slide-in-from-bottom-4 duration-500 rounded-lg overflow-hidden">
-      <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-[#070b14]/50">
+      {/* Upper Navigation Bar */}
+      <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-[#070b14]/50 shrink-0">
         <div className="flex items-center gap-4">
           <h2 className="text-xs font-bold uppercase tracking-widest text-slate-500">MECE Issue Tree</h2>
-          <Tooltip content="Generate a structured issue tree from the core problem" position="bottom" className="inline-flex">
-            <ShimmerButton
-              onClick={handleBuild}
-              disabled={isBuilding || !appState.caseGlance}
-              isLoading={isBuilding}
-              className="bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 text-[10px] uppercase font-bold text-white px-3 py-1.5 rounded transition-colors"
-            >
-              {isBuilding ? 'Structuring...' : 'Build Issue Tree'}
-            </ShimmerButton>
-          </Tooltip>
+          {!isPlayground && (
+            <Tooltip content="Generate a structured issue tree from the core problem" position="bottom" className="inline-flex">
+              <ShimmerButton
+                onClick={handleUnlockAITree}
+                disabled={isBuilding || !appState.caseGlance || (!appState.issueTree && !appState.meceFeedback && (appState.tokens ?? 0) < 10)}
+                isLoading={isBuilding}
+                className="bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 text-[10px] uppercase font-bold text-white px-3 py-1.5 rounded transition-colors cursor-pointer"
+              >
+                {isBuilding 
+                  ? 'Structuring...' 
+                  : appState.issueTree 
+                  ? 'Re-build Issue Tree' 
+                  : appState.meceFeedback 
+                  ? 'Unlock AI Tree (Free)' 
+                  : 'Unlock AI Tree (10 🪙)'}
+              </ShimmerButton>
+            </Tooltip>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {isBuilding ? (
@@ -154,27 +303,82 @@ export const IssueTreeSection: React.FC<Props> = ({ onNext, onGoBack }) => {
         </div>
       </div>
 
-      <div className="p-6 space-y-6 flex-1 overflow-y-auto custom-scrollbar">
-        {appState.issueTree ? (
-          <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl p-6 font-sans text-slate-300 shadow-inner">
-             <TreeNode node={appState.issueTree} level={0} onUpdateText={handleUpdateText} />
+      {/* Mode Selector Tabs */}
+      {appState.caseGlance && (
+        <div className="flex border-b border-slate-850 bg-[#070b14]/20 px-6 py-2.5 shrink-0 gap-4">
+          <button
+            onClick={() => {
+              sounds.playClick();
+              const newState: Partial<AppState> = { issueTreeMode: 'playground' };
+              if (!appState.playgroundTree) {
+                newState.playgroundTree = {
+                  id: 'root',
+                  label: appState.caseGlance?.coreProblem || 'Core Problem',
+                  children: []
+                };
+              }
+              setAppState(prev => ({ ...prev, ...newState }));
+            }}
+            className={`text-[10px] uppercase font-bold tracking-wider py-1.5 px-3 rounded-md transition-all cursor-pointer border ${
+              isPlayground
+                ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30 font-extrabold'
+                : 'text-slate-500 hover:text-slate-400 border-transparent'
+            }`}
+          >
+            Interactive Playground
+          </button>
+          <button
+            onClick={() => {
+              sounds.playClick();
+              setAppState(prev => ({ ...prev, issueTreeMode: 'generate' }));
+            }}
+            className={`text-[10px] uppercase font-bold tracking-wider py-1.5 px-3 rounded-md transition-all cursor-pointer border flex items-center gap-1.5 ${
+              !isPlayground
+                ? 'bg-blue-500/10 text-blue-400 border-blue-500/30 font-extrabold'
+                : 'text-slate-500 hover:text-slate-400 border-transparent'
+            }`}
+          >
+            {appState.issueTree ? '✨' : '🔒'} AI Generated Tree
+          </button>
+        </div>
+      )}
+
+      {/* Main Content Area */}
+      <div className="p-6 flex-1 overflow-y-auto custom-scrollbar flex flex-col min-h-0">
+        {activeTree ? (
+          <div className="flex flex-col lg:flex-row gap-6 items-stretch flex-1 min-h-0">
+            {/* Tree View Column */}
+            <div className="flex-1 bg-slate-900/40 border border-slate-800/80 rounded-xl p-6 font-sans text-slate-300 shadow-inner overflow-y-auto custom-scrollbar">
+              <TreeNode 
+                node={activeTree} 
+                level={0} 
+                onUpdateText={handleUpdateText} 
+                isPlayground={isPlayground}
+                onAddChild={handleAddChild}
+                onDeleteNode={handleDeleteNode}
+                nodeFeedbackMap={nodeFeedbackMap}
+              />
+            </div>
+
+            {/* Coach Audit Column (Playground Mode Only) */}
+            {isPlayground && (
+              <MECECoachPanel
+                isAuditing={isAuditing}
+                meceFeedback={appState.meceFeedback}
+                hasAiTree={!!appState.issueTree}
+                onInitializeFromAI={handleInitializeFromAI}
+                onResetPlayground={handleResetPlayground}
+                onAudit={handleAudit}
+              />
+            )}
           </div>
         ) : appState.caseGlance ? (
-          <div className="h-48 border border-dashed border-slate-800 rounded bg-slate-900/20 flex flex-col items-center justify-center text-slate-600 gap-4">
-            <span className="text-xs uppercase font-bold tracking-widest">
-              Ready to build logic tree
-            </span>
-            <Tooltip content="Generate the MECE issue tree" position="bottom" className="inline-flex">
-              <ShimmerButton
-                onClick={handleBuild}
-                disabled={isBuilding}
-                isLoading={isBuilding}
-                className="bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 text-sm uppercase font-bold text-white px-6 py-3 rounded-lg transition-colors"
-              >
-                {isBuilding ? 'Structuring...' : 'Build Issue Tree'}
-              </ShimmerButton>
-            </Tooltip>
-          </div>
+          <AITreeLockedView
+            isBuilding={isBuilding}
+            tokens={appState.tokens ?? 50}
+            hasMeceFeedback={!!appState.meceFeedback}
+            onUnlock={handleUnlockAITree}
+          />
         ) : (
           <EmptyState 
             title="Awaiting Core Problem Breakdown"
@@ -184,15 +388,15 @@ export const IssueTreeSection: React.FC<Props> = ({ onNext, onGoBack }) => {
           />
         )}
 
-        {appState.issueTree && onNext && (
-          <div className="flex justify-end pt-4 border-t border-slate-800 mt-6">
+        {activeTree && onNext && (
+          <div className="flex justify-end pt-4 border-t border-slate-800 mt-6 shrink-0">
             <Tooltip content="Proceed to select analysis frameworks" position="top" className="inline-flex">
               <button 
                 onClick={() => {
                   sounds.playTransition();
                   if (onNext) onNext();
                 }}
-                className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-2"
+                className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-2 cursor-pointer"
               >
                 Select Frameworks
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
@@ -201,6 +405,23 @@ export const IssueTreeSection: React.FC<Props> = ({ onNext, onGoBack }) => {
           </div>
         )}
       </div>
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 4px;
+          height: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #1e293b;
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #334155;
+        }
+      `}} />
     </section>
   );
 };

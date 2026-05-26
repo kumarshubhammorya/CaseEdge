@@ -94,3 +94,19 @@ export async function strengthenRecommendation(scr: SCRStructure) {
 export async function extractAssumptions(recommendationText: string) {
   return callProxy('extractAssumptions', [recommendationText]);
 }
+
+export async function evaluateIssueTree(issueTreeJson: string, coreProblem: string) {
+  return callProxy('evaluateIssueTree', [issueTreeJson, coreProblem]);
+}
+
+export async function evaluateIntake(caseBrief: string, userCluesJson: string) {
+  return callProxy('evaluateIntake', [caseBrief, userCluesJson]);
+}
+
+export async function evaluateFrameworks(proposedFrameworks: string, caseBrief: string, caseGlanceJson: string) {
+  return callProxy('evaluateFrameworks', [proposedFrameworks, caseBrief, caseGlanceJson]);
+}
+
+export async function getFrameworkHint(caseBrief: string, caseGlanceJson: string, proposedFrameworks: string, hintsCount: number) {
+  return callProxy('getFrameworkHint', [caseBrief, caseGlanceJson, proposedFrameworks, hintsCount]);
+}

@@ -28,26 +28,3 @@
   0% { background-position: 0 0; }
   100% { background-position: 0 -32px; }
 }
-
-@keyframes float1 {
-  0% { transform: translate(0px, 0px) scale(1); }
-  33% { transform: translate(30px, -50px) scale(1.1); }
-  66% { transform: translate(-20px, 20px) scale(0.9); }
-  100% { transform: translate(0px, 0px) scale(1); }
-}
-
-@keyframes float2 {
-  0% { transform: translate(0px, 0px) scale(1); }
-  50% { transform: translate(-40px, 40px) scale(1.15); }
-  100% { transform: translate(0px, 0px) scale(1); }
-}
-
-@layer utilities {
-  .animate-float-1 {
-    animation: float1 15s ease-in-out infinite;
-  }
-  .animate-float-2 {
-    animation: float2 20s ease-in-out infinite;
-  }
-}
-

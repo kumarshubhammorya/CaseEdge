@@ -63,7 +63,7 @@ export default function App() {
       <div className="flex flex-1 min-h-0 relative">
         <Sidebar activeSection={activeSection} setActiveSection={setActiveSection} onShowGuide={() => setShowUserGuide(true)} />
         
-        <main key={sessionKey} className="flex-1 overflow-y-auto bg-slate-800/10 min-h-0 flex flex-col relative custom-scrollbar">
+        <main key={sessionKey} className="flex-1 overflow-hidden bg-slate-800/10 min-h-0 flex flex-col relative">
           <ProgressBar />
           {!showUserGuide && (activeSection !== 'intake' || appState.caseGlance) && <ScrollDownIndicator />}
           <div className="w-full max-w-5xl mx-auto py-2 md:py-4 px-4 md:px-6 lg:px-8 flex-1 flex flex-col min-h-0 pb-[100px] md:pb-8">

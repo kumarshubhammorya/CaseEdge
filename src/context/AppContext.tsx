@@ -18,7 +18,21 @@ const INITIAL_STATE: AppState = {
   calibratedRecommendation: null,
   qas: null,
   activeFrameworks: [],
-  assumptions: null
+  assumptions: null,
+  issueTreeMode: "playground",
+  playgroundTree: null,
+  meceFeedback: null,
+  recLead: "",
+  recPillar1: "",
+  recPillar2: "",
+  recRisk: "",
+  userClues: [],
+  intakeFeedback: null,
+  frameworksMode: "socratic",
+  userFrameworksInput: "",
+  frameworksHintsCount: 0,
+  socraticFeedback: null,
+  tokens: 50
 };
 
 interface AppContextProps {

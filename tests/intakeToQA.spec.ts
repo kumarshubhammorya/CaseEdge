@@ -149,11 +149,11 @@ test.describe('CaseEdge Intake-to-Q&A Workflow E2E Test', () => {
 
     // 3. Complete Case Intake
     const casePrompt = 'Our client is a major US airline. Despite relatively stable revenue and passenger volumes over the last two years, their overall profitability has declined by 15%. The CEO hired us to determine the root cause of this decline and to recommend strategies to return to historical profit margins.';
-    await page.locator('textarea[placeholder="Paste case prompt, company background, exhibit notes..."]').fill(casePrompt);
-    await page.getByRole('button', { name: 'Analyze Case' }).click();
+    await page.locator('textarea[placeholder*="Paste case prompt"]').fill(casePrompt);
+    await page.getByRole('button', { name: /Bypass & Auto-Analyze/ }).click();
 
     // Verify extracted details are visible
-    await expect(page.locator('text=Case at a Glance')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('heading', { name: 'Case at a Glance', exact: true })).toBeVisible({ timeout: 5000 });
     await expect(page.locator('text=Core Problem')).toBeVisible();
     await expect(page.locator('text=Airline profitability declined by 15% despite stable revenue.')).toBeVisible();
 
@@ -161,7 +161,13 @@ test.describe('CaseEdge Intake-to-Q&A Workflow E2E Test', () => {
     await page.getByRole('button', { name: 'Continue to Issue Tree' }).click();
 
     // 4. Issue Tree Page
-    // The issue tree is auto-built on page load. Let's wait for the tree nodes to render.
+    // Switch to AI Generated Tree tab to trigger AI logic check in E2E
+    await page.getByRole('button', { name: 'AI Generated Tree' }).click();
+
+    // Click Bypass & Unlock to build the AI tree
+    await page.getByRole('button', { name: /Bypass & Unlock/ }).click();
+
+    // Let's wait for the tree nodes to render.
     await expect(page.locator('text=Decline in Airline Profitability')).toBeVisible({ timeout: 5000 });
     await expect(page.locator('text=Revenue Drivers')).toBeVisible();
     await expect(page.locator('text=Cost Drivers')).toBeVisible();
@@ -170,7 +176,13 @@ test.describe('CaseEdge Intake-to-Q&A Workflow E2E Test', () => {
     await page.getByRole('button', { name: 'Select Frameworks' }).click();
 
     // 5. Frameworks Page
-    // The frameworks are auto-recommended. Let's wait for the Profitability Framework card.
+    // Switch to Auto-Generate tab to bypass Socratic Guide in E2E
+    await page.getByRole('button', { name: 'Auto-Generate Recommendations' }).click();
+
+    // Click Bypass & Unlock to generate the AI recommendations
+    await page.getByRole('button', { name: /Bypass & Unlock/ }).click();
+
+    // Let's wait for the Profitability Framework card.
     await expect(page.locator('text=Profitability Framework')).toBeVisible({ timeout: 5000 });
 
     // Hover over the first card and click "Use This Framework" to activate it
@@ -184,11 +196,13 @@ test.describe('CaseEdge Intake-to-Q&A Workflow E2E Test', () => {
     await page.getByRole('button', { name: 'Draft Recommendation' }).click();
 
     // 6. Recommendation Drafter Page
-    const recommendationInput = 'We recommend implementing fuel hedging, crew scheduling optimization, and premium ancillary services.';
-    await page.locator('textarea[placeholder="Type your team\'s core recommendation in 1-2 sentences..."]').fill(recommendationInput);
+    await page.locator('input[placeholder*="M&A target acquisition"]').fill('Acquire regional airlines to consolidate domestic market share.');
+    await page.locator('input[placeholder*="Synergies will increase"]').fill('Consolidation will improve operating profit margins by 5%.');
+    await page.locator('input[placeholder*="Re-allocates 85%"]').fill('Merge fleet routes to optimize flight crew scheduling.');
+    await page.locator('input[placeholder*="Union friction mitigated"]').fill('Engage labor union leadership early to align crew guarantees.');
     
     // Format recommendation as SCR
-    await page.getByRole('button', { name: 'Format as SCR' }).click();
+    await page.getByRole('button', { name: 'Combine & Format as SCR' }).click();
 
     // Verify SCR structured response
     await expect(page.locator('text=Recommendation (SCR Format)')).toBeVisible({ timeout: 5000 });
@@ -198,7 +212,10 @@ test.describe('CaseEdge Intake-to-Q&A Workflow E2E Test', () => {
     await page.getByRole('button', { name: 'Generate Slide Outline' }).click();
 
     // 7. Slide Outline Page
-    // Slides are auto-generated. Let's check for slide content.
+    // Click Generate Deck Structure button explicitly
+    await page.getByRole('button', { name: 'Generate Deck Structure' }).click();
+
+    // Let's check for slide content.
     await expect(page.locator('text=Executive Summary')).toBeVisible({ timeout: 5000 });
     await expect(page.locator('text=Situation & Complication')).toBeVisible();
 
@@ -206,11 +223,17 @@ test.describe('CaseEdge Intake-to-Q&A Workflow E2E Test', () => {
     await page.getByRole('button', { name: 'Continue to Judge Q&A' }).click();
 
     // 8. Judge Q&A Page
-    // Questions are auto-simulated. Let's verify Question 1 cards.
+    // Click Start Q&A Simulator Drill explicitly
+    await page.getByRole('button', { name: 'Start Q&A Simulator Drill' }).click();
+
+    // Let's verify Question 1 cards.
     await expect(page.locator('text=Question 1')).toBeVisible({ timeout: 5000 });
 
     // Click the first card to flip it
     await page.locator('.perspective-1000').first().click();
+
+    // Click Skip & Reveal Answer to unlock the buttons
+    await page.getByRole('button', { name: 'Skip & Reveal Answer' }).first().click();
 
     // Verify that the flipped back card shows model answer actions
     await expect(page.getByRole('button', { name: 'Got this' }).first()).toBeVisible();

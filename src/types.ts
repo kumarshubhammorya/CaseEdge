@@ -22,6 +22,7 @@ export type SCRStructure = {
 export type QA = {
   question: string;
   modelAnswer: string;
+  rubric?: string[];
   status?: 'got-it' | 'need-practice';
 };
 
@@ -53,6 +54,21 @@ export type Assumption = {
   whatBreaksThis: string;
 };
 
+export type NodeFeedbackItem = {
+  nodeId: string;
+  feedback: string;
+  severity: 'warning' | 'info';
+};
+
+export type MECEFeedback = {
+  score: number;
+  isMECE: boolean;
+  meceSummary: string;
+  structuralGaps: string[];
+  overlaps: string[];
+  nodeFeedback: NodeFeedbackItem[];
+};
+
 export type AppState = {
   caseBrief: string;
   caseGlance: CaseGlance | null;
@@ -70,4 +86,30 @@ export type AppState = {
   qas: QA[] | null;
   activeFrameworks: Framework[];
   assumptions: Assumption[] | null;
+  issueTreeMode?: 'generate' | 'playground';
+  playgroundTree?: IssueTreeNode | null;
+  meceFeedback?: MECEFeedback | null;
+  recLead?: string;
+  recPillar1?: string;
+  recPillar2?: string;
+  recRisk?: string;
+  userClues?: UserClue[];
+  intakeFeedback?: IntakeFeedback | null;
+  frameworksMode?: 'socratic' | 'generate';
+  userFrameworksInput?: string;
+  frameworksHintsCount?: number;
+  socraticFeedback?: string | null;
+  tokens: number;
+};
+
+export type UserClue = {
+  text: string;
+  category: 'objective' | 'constraint' | 'stakeholder' | 'metric';
+};
+
+export type IntakeFeedback = {
+  score: number;
+  summary: string;
+  missingClues: string[];
+  correctClues: string[];
 };

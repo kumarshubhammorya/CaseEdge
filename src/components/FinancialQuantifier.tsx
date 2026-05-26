@@ -32,6 +32,11 @@ export const FinancialQuantifier: React.FC = () => {
   };
 
   const handleGenerateQuantPrompt = async () => {
+    if ((appState.tokens ?? 0) < 5) {
+      sounds.playError();
+      toast.error("Insufficient tokens! You need at least 5 tokens to use AI Assistant.");
+      return;
+    }
     sounds.playClick();
     if (!appState.coreRecommendation) return;
     setIsGeneratingQuantPrompt(true);
@@ -40,8 +45,12 @@ export const FinancialQuantifier: React.FC = () => {
         appState.caseBrief,
         appState.expandedRecommendation?.resolution || appState.coreRecommendation
       );
-      setAppState((prev) => ({ ...prev, quantificationPrompt: result }));
-      toast.success("Quantification scenario generated!");
+      setAppState((prev) => ({ 
+        ...prev, 
+        quantificationPrompt: result,
+        tokens: Math.max(0, (prev.tokens ?? 50) - 5)
+      }));
+      toast.success("Quantification scenario generated! (-5 🪙)");
     } catch (err: any) {
       toast.error("Failed to generate quantification prompt: " + (err?.message || ""));
     } finally {
@@ -55,15 +64,15 @@ export const FinancialQuantifier: React.FC = () => {
         <p className="text-[10px] uppercase text-slate-500 font-bold">
           Quantification Assistant
         </p>
-        <Tooltip content="Auto-generate a description using AI based on your recommendation" position="left">
+        <Tooltip content={appState.coreRecommendation ? "Deduct 5 tokens to auto-generate a description using AI" : "Enter recommendation first"} position="left">
           <ShimmerButton
             onClick={handleGenerateQuantPrompt}
-            disabled={isGeneratingQuantPrompt || !appState.coreRecommendation}
+            disabled={isGeneratingQuantPrompt || !appState.coreRecommendation || (appState.tokens ?? 0) < 5}
             isLoading={isGeneratingQuantPrompt}
             className="bg-amber-500/10 hover:bg-amber-500/20 disabled:bg-slate-800 text-amber-500 border border-amber-500/30 text-[10px] uppercase font-bold px-3 py-1.5 rounded transition-colors flex items-center gap-1.5"
           >
             <Lightbulb className="w-3 h-3" />
-            {isGeneratingQuantPrompt ? "Analyzing..." : "AI Assistant"}
+            {isGeneratingQuantPrompt ? "Analyzing..." : "AI Assistant (5 🪙)"}
           </ShimmerButton>
         </Tooltip>
       </div>
