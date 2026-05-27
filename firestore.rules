@@ -53,5 +53,14 @@ service cloud.firestore {
       allow update: if false;
       allow delete: if isSignedIn() && existing().ownerId == request.auth.uid;
     }
+
+    match /users/{userId} {
+      allow read, write: if isSignedIn() && userId == request.auth.uid;
+    }
+
+    match /case_analytics/{analyticsId} {
+      allow read: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow write: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+    }
   }
 }

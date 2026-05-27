@@ -5,6 +5,8 @@ import { toast } from 'sonner';
 import { AppState } from '../types';
 import { sounds } from '../lib/sounds';
 import { useAppContext } from '../context/AppContext';
+import { useAuth } from '../lib/AuthContext';
+import { UserProfile } from './UserProfile';
 
 type SidebarProps = {
   activeSection: string;
@@ -33,6 +35,7 @@ export const isSectionEnabled = (sectionId: string, appState: AppState): boolean
     case 'intake':
     case 'library':
     case 'database':
+    case 'admin':
       return true;
     case 'issueTree':
       return isIntakeCompleted;
@@ -52,13 +55,14 @@ export const isSectionEnabled = (sectionId: string, appState: AppState): boolean
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeSection, setActiveSection, onShowGuide }) => {
   const { appState } = useAppContext();
+  const { user } = useAuth();
   const activeCaseTitle = appState.caseGlance?.industry 
     ? `${appState.caseGlance.industry} Analysis`
     : 'No active case';
 
   return (
-    <aside className="w-56 border-r border-slate-800 bg-[#0f172a] flex flex-col py-6 shrink-0 z-10 hidden md:flex">
-      <nav className="space-y-1 px-3 flex-1">
+    <aside className="w-56 border-r border-slate-800 bg-[#0f172a] flex flex-col py-4 shrink-0 z-10 hidden md:flex h-full">
+      <nav className="space-y-1 px-3 flex-1 overflow-y-auto hide-scrollbar pb-4">
         {SECTIONS.map((sec) => {
           const enabled = isSectionEnabled(sec.id, appState);
           return (
@@ -125,13 +129,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, setActiveSectio
           </div>
           <ExternalLink className="w-3 h-3 text-blue-500/50" />
         </a>
+
+        <div className="px-3 py-1 text-[9px] text-slate-500 font-mono">
+          Session Active
+        </div>
       </nav>
 
-      <div className="mt-auto px-6">
-        <div className="p-4 border border-slate-800 rounded-lg bg-slate-900/50 block">
+      <div className="mt-auto px-4 pb-2 shrink-0 border-t border-slate-800/50 pt-4">
+        <div className="p-3 border border-slate-800 rounded-lg bg-slate-900/50 block mb-2">
           <p className="text-[10px] uppercase text-slate-500 font-bold mb-2 tracking-tighter">Active Case</p>
           <p className="text-xs font-semibold text-white leading-tight truncate">{activeCaseTitle}</p>
         </div>
+        <UserProfile activeSection={activeSection} setActiveSection={setActiveSection} />
       </div>
     </aside>
   );

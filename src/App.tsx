@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Toaster, toast } from 'sonner';
 import { Sidebar } from './components/Sidebar';
 import { MobileNav } from './components/MobileNav';
@@ -12,6 +12,8 @@ import { QASection } from './components/QASection';
 import { DatabaseSection } from './components/DatabaseSection';
 import { LibrarySection } from './components/LibrarySection';
 import { AssumptionTracker } from './components/AssumptionTracker';
+import { AdminSection } from './components/AdminSection';
+import { ProfileSection } from './components/ProfileSection';
 import { Landing } from './components/Landing';
 import { UserGuide } from './components/UserGuide';
 import { ScrollDownIndicator } from './components/ScrollDownIndicator';
@@ -22,6 +24,7 @@ import { exportSessionToPdf } from './lib/exportUtils';
 import { sounds } from './lib/sounds';
 import { DiagnosticsPanel } from './components/DiagnosticsPanel';
 import { Lock, BookOpen } from 'lucide-react';
+import { saveCaseAnalytics } from './lib/firestoreService';
 
 
 export default function App() {
@@ -33,15 +36,75 @@ export default function App() {
   
   const { user, signIn } = useAuth();
   const { appState, handleReset: resetContext, setAppState } = useAppContext();
+  const lastAuthStatusRef = React.useRef<'logged-in' | 'logged-out' | null>(null);
 
   const completedCount = parseInt(localStorage.getItem('caseedge_completed_sessions_count') || '0', 10);
   const hasActiveCompletedCase = appState.isSessionCompleted && appState.caseBrief;
   const isBlocked = user?.isAnonymous && completedCount >= 1 && !hasActiveCompletedCase;
 
+  useEffect(() => {
+    if (user && !user.isAnonymous) {
+      if (lastAuthStatusRef.current === 'logged-in') {
+        return;
+      }
+      lastAuthStatusRef.current = 'logged-in';
+
+      setAppState(prev => {
+        if (prev.hasReceivedLoginBonus) {
+          return prev;
+        }
+        toast.success("Login bonus! You received 50 tokens.", { duration: 4000 });
+        return {
+          ...prev,
+          tokens: (prev.tokens ?? 50) + 50,
+          hasReceivedLoginBonus: true
+        };
+      });
+    } else if (user && user.isAnonymous) {
+      if (lastAuthStatusRef.current === 'logged-out') {
+        return;
+      }
+      lastAuthStatusRef.current = 'logged-out';
+
+      setAppState(prev => {
+        if (!prev.hasReceivedLoginBonus) {
+          return prev;
+        }
+        toast.success("Signed out successfully. (-50 tokens)");
+        return {
+          ...prev,
+          tokens: Math.max(0, (prev.tokens ?? 50) - 50),
+          hasReceivedLoginBonus: false
+        };
+      });
+    }
+  }, [user, setAppState]);
+
   const handleExport = async () => {
     try {
       await exportSessionToPdf(appState);
       toast.success("Case study exported as PDF!");
+      
+      // Calculate elapsed time from the timer
+      const timeLeft = (window as any).caseedge_timer_timeleft ?? (30 * 60);
+      const totalTimeSeconds = Math.max(0, (30 * 60) - timeLeft);
+
+      if (user && !user.isAnonymous) {
+        try {
+          await saveCaseAnalytics({
+            caseTitle: appState.caseGlance?.industry || 'General Case Study',
+            caseType: appState.caseGlance?.caseType || 'General Case',
+            intakeScore: appState.intakeFeedback?.score || 0,
+            structuringScore: appState.meceFeedback?.score || 0,
+            frameworkScore: appState.frameworksScore || 0,
+            totalTimeSeconds: totalTimeSeconds,
+            isCompleted: true
+          });
+          toast.success("Practice analytics saved to cloud!");
+        } catch (analyticsErr) {
+          console.error("Failed to save case analytics:", analyticsErr);
+        }
+      }
       
       if (!appState.isSessionCompleted) {
         setAppState(prev => ({ ...prev, isSessionCompleted: true }));
@@ -99,6 +162,7 @@ export default function App() {
       {showUserGuide && <UserGuide onClose={() => setShowUserGuide(false)} />}
       <Timer 
         activeSection={activeSection} 
+        setActiveSection={setActiveSection}
         onExport={handleExport} 
         onReset={handleReset} 
         showCaseBriefDrawer={showCaseBriefDrawer}
@@ -121,6 +185,8 @@ export default function App() {
             {activeSection === 'qa' && <QASection onGoBack={() => setActiveSection('slideOutline')} />}
             {activeSection === 'assumptions' && <AssumptionTracker onGoBack={() => setActiveSection('intake')} />}
             {activeSection === 'database' && <DatabaseSection />}
+            {activeSection === 'admin' && <AdminSection />}
+            {activeSection === 'profile' && <ProfileSection />}
           </div>
         </main>
       </div>

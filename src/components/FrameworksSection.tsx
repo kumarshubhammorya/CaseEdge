@@ -176,6 +176,7 @@ export const FrameworksSection: React.FC<{ onNext?: () => void; onGoBack?: () =>
         ...prev, 
         socraticFeedback: result.feedback,
         frameworks: result.frameworks,
+        frameworksScore: result.score,
         tokens: (prev.tokens ?? 50) + 5 // Reward +5 tokens
       }));
       setScoreFeedback(result.score);
@@ -196,6 +197,7 @@ export const FrameworksSection: React.FC<{ onNext?: () => void; onGoBack?: () =>
       userFrameworksInput: "",
       socraticFeedback: null,
       frameworks: null,
+      frameworksScore: null,
       frameworksHintsCount: 0,
       activeFrameworks: []
     }));

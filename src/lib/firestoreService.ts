@@ -1,4 +1,4 @@
-import { collection, doc, setDoc, getDocs, deleteDoc, query, where, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, setDoc, getDoc, getDocs, deleteDoc, query, where, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from './firebase';
 import { telemetry } from './telemetry';
 
@@ -166,6 +166,73 @@ export async function deletePublicCase(id: string) {
     await deleteDoc(doc(db, 'public_cases', id));
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, `public_cases/${id}`);
+  }
+}
+
+export async function getUserProfile(userId: string) {
+  try {
+    const docRef = doc(db, 'users', userId);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      return docSnap.data();
+    }
+    return null;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, `users/${userId}`);
+    return null;
+  }
+}
+
+export async function saveUserProfile(
+  userId: string,
+  data: { username: string; bio: string; dob: string; collegeName: string }
+) {
+  try {
+    await setDoc(doc(db, 'users', userId), {
+      ...data,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, `users/${userId}`);
+  }
+}
+
+export async function saveCaseAnalytics(data: {
+  caseTitle: string;
+  caseType: string;
+  intakeScore: number;
+  structuringScore: number;
+  frameworkScore: number;
+  totalTimeSeconds: number;
+  isCompleted: boolean;
+}) {
+  if (!auth.currentUser) throw new Error("Not logged in");
+
+  const analyticsId = generateUUID();
+  try {
+    await setDoc(doc(db, 'case_analytics', analyticsId), {
+      ownerId: auth.currentUser.uid,
+      ...data,
+      createdAt: serverTimestamp(),
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, `case_analytics/${analyticsId}`);
+  }
+  return analyticsId;
+}
+
+export async function getCaseAnalytics() {
+  if (!auth.currentUser) return [];
+  const q = query(
+    collection(db, 'case_analytics'),
+    where('ownerId', '==', auth.currentUser.uid)
+  );
+  try {
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, 'case_analytics');
+    return [];
   }
 }
 

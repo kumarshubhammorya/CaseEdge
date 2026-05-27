@@ -28,13 +28,16 @@ const INITIAL_STATE: AppState = {
   recRisk: "",
   userClues: [],
   intakeFeedback: null,
+  frameworksScore: null,
   frameworksMode: "socratic",
   userFrameworksInput: "",
   frameworksHintsCount: 0,
   socraticFeedback: null,
   tokens: 50,
   isSessionCompleted: false,
-  focusedNodeId: null
+  focusedNodeId: null,
+  hasReceivedLoginBonus: false,
+  lastReceivedBonusEmail: ""
 };
 
 interface AppContextProps {
@@ -49,7 +52,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [appState, setAppState] = useLocalStorage<AppState>('caseedge-state', INITIAL_STATE);
 
   const handleReset = () => {
-    setAppState(INITIAL_STATE);
+    setAppState(prev => ({
+      ...INITIAL_STATE,
+      tokens: prev.tokens,
+      hasReceivedLoginBonus: prev.hasReceivedLoginBonus,
+      lastReceivedBonusEmail: prev.lastReceivedBonusEmail
+    }));
   };
 
   return (

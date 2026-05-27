@@ -1,8 +1,9 @@
 import React from 'react';
 import { SECTIONS, isSectionEnabled } from './Sidebar';
 import { sounds } from '../lib/sounds';
-import { BookOpen, BarChart, Lock } from 'lucide-react';
+import { BookOpen, BarChart, Lock, Settings, User } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
+import { useAuth } from '../lib/AuthContext';
 import { toast } from 'sonner';
 
 type MobileNavProps = {
@@ -13,6 +14,7 @@ type MobileNavProps = {
 
 export const MobileNav: React.FC<MobileNavProps> = ({ activeSection, setActiveSection, onShowGuide }) => {
   const { appState } = useAppContext();
+  const { user } = useAuth();
 
   return (
     <nav className="md:hidden fixed bottom-6 left-4 right-4 bg-slate-900/95 backdrop-blur-md border border-slate-700/50 rounded-2xl shadow-2xl z-50 px-2 py-2 flex overflow-x-auto hide-scrollbar snap-x touch-pan-x">
@@ -78,6 +80,40 @@ export const MobileNav: React.FC<MobileNavProps> = ({ activeSection, setActiveSe
           Data BI
         </span>
       </a>
+      <button
+        onClick={() => {
+          sounds.playClick();
+          setActiveSection('profile');
+        }}
+        className={`shrink-0 flex flex-col items-center justify-center gap-1.5 p-2 rounded-xl transition-all snap-center min-w-[72px] ${
+          activeSection === 'profile'
+            ? 'text-blue-400 bg-blue-500/10 scale-[1.05]'
+            : 'text-slate-500 hover:text-slate-350'
+        }`}
+      >
+        <User className="w-5 h-5 flex-shrink-0" />
+        <span className="text-[10px] font-bold uppercase tracking-tight truncate w-full text-center">
+          Profile
+        </span>
+      </button>
+      {user?.email?.toLowerCase().trim() === 'kumarshubhammorya@gmail.com' && (
+        <button
+          onClick={() => {
+            sounds.playClick();
+            setActiveSection('admin');
+          }}
+          className={`shrink-0 flex flex-col items-center justify-center gap-1.5 p-2 rounded-xl transition-all snap-center min-w-[72px] ${
+            activeSection === 'admin'
+              ? 'text-purple-400 bg-purple-500/10 scale-[1.05]'
+              : 'text-purple-400/60 hover:text-purple-400'
+          }`}
+        >
+          <Settings className="w-5 h-5 flex-shrink-0" />
+          <span className="text-[10px] font-bold uppercase tracking-tight truncate w-full text-center">
+            Admin
+          </span>
+        </button>
+      )}
     </nav>
   );
 };

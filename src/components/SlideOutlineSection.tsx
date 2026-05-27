@@ -5,7 +5,7 @@ import { AppState } from '../types';
 import { EmptyState } from './EmptyState';
 import { ShimmerButton } from './MicroInteractions';
 import { sounds } from '../lib/sounds';
-import { Presentation, Save, LayoutTemplate, LogIn, ExternalLink } from 'lucide-react';
+import { Presentation, Save, LayoutTemplate, ExternalLink } from 'lucide-react';
 
 import { useAppContext } from '../context/AppContext';
 import { useAuth } from '../lib/AuthContext';
@@ -18,7 +18,7 @@ type Props = {
 
 export const SlideOutlineSection = ({ onNext, onGoBack }: Props) => {
   const { appState, setAppState } = useAppContext();
-  const { accessToken, signIn, user } = useAuth();
+  const { requestSlidesAccess } = useAuth();
   const [isGenerating, setIsGenerating] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [exportUrl, setExportUrl] = useState<string | null>(null);
@@ -48,25 +48,20 @@ export const SlideOutlineSection = ({ onNext, onGoBack }: Props) => {
 
   const handleExport = async () => {
     sounds.playClick();
-    if (!accessToken) {
-      try {
-        await signIn();
-      } catch (err: any) {
-        console.error("Sign in failed:", err);
-        toast.error("Sign in failed: " + (err?.message || "Unknown error"));
-        return;
-      }
-      return;
-    }
-
     if (!appState.slideOutline) return;
 
-    const confirmed = window.confirm("Are you sure you want to create a new presentation in your Google Drive?");
+    const confirmed = window.confirm("CaseEdge needs permission to create a Google Slides presentation in your Google Drive. Would you like to grant this permission?");
     if (!confirmed) return;
 
     setIsExporting(true);
     try {
-      const url = await exportToGoogleSlides(accessToken, appState.slideOutline);
+      const token = await requestSlidesAccess();
+      if (!token) {
+        setIsExporting(false);
+        return;
+      }
+      
+      const url = await exportToGoogleSlides(token, appState.slideOutline);
       setExportUrl(url);
       sounds.playSuccess();
       toast.success("Presentation exported to Google Slides!");
@@ -194,12 +189,7 @@ export const SlideOutlineSection = ({ onNext, onGoBack }: Props) => {
                   isLoading={isExporting}
                   className="bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-400 text-white px-4 py-2 rounded flex items-center gap-2 text-sm font-medium transition-colors whitespace-nowrap"
                 >
-                  {!accessToken ? (
-                    <>
-                      <LogIn className="w-4 h-4" />
-                      Sign in to Export
-                    </>
-                  ) : isExporting ? (
+                  {isExporting ? (
                     'Exporting...'
                   ) : (
                     <>

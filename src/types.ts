@@ -95,11 +95,14 @@ export type AppState = {
   recRisk?: string;
   userClues?: UserClue[];
   intakeFeedback?: IntakeFeedback | null;
+  frameworksScore?: number | null;
   frameworksMode?: 'socratic' | 'generate';
   userFrameworksInput?: string;
   frameworksHintsCount?: number;
   socraticFeedback?: string | null;
   tokens: number;
+  hasReceivedLoginBonus?: boolean;
+  lastReceivedBonusEmail?: string;
   isSessionCompleted?: boolean;
   focusedNodeId?: string | null;
 };

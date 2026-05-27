@@ -69,7 +69,7 @@ export function DiagnosticsPanel() {
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-12 left-4 z-40 flex items-center gap-2 px-3 py-2 bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-cyan-400 border border-slate-700/80 hover:border-cyan-500/50 rounded-full shadow-lg transition-all duration-300 group cursor-pointer"
+        className="fixed bottom-4 right-4 z-40 flex items-center gap-2 px-3 py-2 bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-cyan-400 border border-slate-700/80 hover:border-cyan-500/50 rounded-full shadow-lg transition-all duration-300 group cursor-pointer"
         title="Open Diagnostics Console"
       >
         <span className="relative flex h-2 w-2">
@@ -83,7 +83,7 @@ export function DiagnosticsPanel() {
   }
 
   return (
-    <div className="fixed inset-y-0 left-0 w-full sm:w-96 bg-slate-950/95 backdrop-blur-xl border-r border-slate-800 shadow-2xl z-50 flex flex-col transition-all duration-300 font-sans text-slate-200">
+    <div className="fixed inset-y-0 right-0 w-full sm:w-96 bg-slate-950/95 backdrop-blur-xl border-l border-slate-800 shadow-2xl z-50 flex flex-col transition-all duration-300 font-sans text-slate-200">
       {/* Header */}
       <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/50">
         <div className="flex items-center gap-2">

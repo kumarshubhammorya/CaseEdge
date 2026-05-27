@@ -1,19 +1,22 @@
 import { useState, useEffect } from 'react';
-import { Play, Pause, RotateCcw, Volume2, VolumeX, Zap, BookOpen } from 'lucide-react';
+import { Play, Pause, RotateCcw, Volume2, VolumeX, Zap, BookOpen, Settings } from 'lucide-react';
 import { sounds } from '../lib/sounds';
 import { Tooltip } from './MicroInteractions';
 import { useAppContext } from '../context/AppContext';
+import { useAuth } from '../lib/AuthContext';
 
 type Props = {
   activeSection: string;
+  setActiveSection: (section: string) => void;
   onExport: () => Promise<void>;
   onReset: () => void;
   showCaseBriefDrawer: boolean;
   onToggleCaseBrief: () => void;
 };
 
-export const Timer = ({ activeSection, onExport, onReset, showCaseBriefDrawer, onToggleCaseBrief }: Props) => {
+export const Timer = ({ activeSection, setActiveSection, onExport, onReset, showCaseBriefDrawer, onToggleCaseBrief }: Props) => {
   const { appState } = useAppContext();
+  const { user } = useAuth();
   const [duration, setDuration] = useState<number>(30 * 60); // setup 30 mins default
   const [timeLeft, setTimeLeft] = useState<number>(30 * 60);
   const [isRunning, setIsRunning] = useState<boolean>(false);
@@ -71,7 +74,11 @@ export const Timer = ({ activeSection, onExport, onReset, showCaseBriefDrawer, o
     let interval: NodeJS.Timeout;
     if (isRunning && timeLeft > 0) {
       interval = setInterval(() => {
-        setTimeLeft((prev) => prev - 1);
+        setTimeLeft((prev) => {
+          const next = prev - 1;
+          (window as any).caseedge_timer_timeleft = next;
+          return next;
+        });
       }, 1000);
     } else if (timeLeft === 0 && isRunning) {
       setIsRunning(false);
@@ -180,6 +187,24 @@ export const Timer = ({ activeSection, onExport, onReset, showCaseBriefDrawer, o
       </div>
       
       <div className="flex items-center gap-1.5 sm:gap-6 min-w-0">
+        {user?.email?.toLowerCase().trim() === 'kumarshubhammorya@gmail.com' && (
+          <button
+            onClick={() => {
+              sounds.playClick();
+              setActiveSection('admin');
+            }}
+            className={`px-3 py-1 sm:py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-purple-500/50 ${
+              activeSection === 'admin'
+                ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30 shadow-[0_0_10px_rgba(168,85,247,0.2)]'
+                : 'bg-purple-950/20 text-purple-400/80 border border-purple-900/30 hover:bg-purple-900/20 hover:text-purple-300'
+            }`}
+          >
+            <Settings className="w-3.5 h-3.5 text-purple-400 animate-spin-slow" />
+            <span className="hidden sm:inline">Admin Panel</span>
+            <span className="sm:hidden">Admin</span>
+          </button>
+        )}
+
         <div className="flex flex-col items-end border-l border-slate-800 pl-4 sm:pl-6 shrink-0 relative">
           <span className="text-[10px] uppercase text-slate-500 font-bold tracking-widest hidden sm:block">AI Balance</span>
           <div className="flex items-center gap-1.5 sm:gap-2 sm:-mt-1 h-6 relative">
