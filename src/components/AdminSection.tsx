@@ -27,6 +27,7 @@ export function AdminSection() {
     try {
       const casesSnap = await getDocs(collection(db, 'cases'));
       const publicSnap = await getDocs(collection(db, 'public_cases'));
+      const usersSnap = await getDocs(collection(db, 'users'));
 
       const privateCount = casesSnap.size;
       const publicCount = publicSnap.size;
@@ -39,6 +40,9 @@ export function AdminSection() {
       publicSnap.forEach(doc => {
         const data = doc.data();
         if (data.ownerId) uniqueOwners.add(data.ownerId);
+      });
+      usersSnap.forEach(doc => {
+        uniqueOwners.add(doc.id);
       });
 
       setMetrics({

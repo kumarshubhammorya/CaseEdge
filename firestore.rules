@@ -6,6 +6,7 @@ service cloud.firestore {
     }
 
     function isSignedIn() { return request.auth != null; }
+    function isAdmin() { return isSignedIn() && request.auth.token.email == 'kumarshubhammorya@gmail.com'; }
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }
     function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
@@ -31,17 +32,15 @@ service cloud.firestore {
     }
 
     match /cases/{caseId} {
-      allow read: if isSignedIn() && existing().ownerId == request.auth.uid;
-      // List
-      allow list: if isSignedIn() && existing().ownerId == request.auth.uid;
+      allow read, list: if isSignedIn() && (existing().ownerId == request.auth.uid || isAdmin());
       allow create: if isSignedIn() 
         && isValidId(caseId) 
         && isValidCaseFile(incoming()) 
         && incoming().keys().size() >= 3;
       allow update: if isSignedIn() 
         && isValidCaseFile(incoming()) 
-        && incoming().ownerId == existing().ownerId;
-      allow delete: if isSignedIn() && existing().ownerId == request.auth.uid;
+        && (incoming().ownerId == existing().ownerId || isAdmin());
+      allow delete: if isSignedIn() && (existing().ownerId == request.auth.uid || isAdmin());
     }
 
     match /public_cases/{caseId} {
@@ -51,16 +50,16 @@ service cloud.firestore {
         && isValidPublicCase(incoming())
         && incoming().keys().size() >= 7;
       allow update: if false;
-      allow delete: if isSignedIn() && existing().ownerId == request.auth.uid;
+      allow delete: if isSignedIn() && (existing().ownerId == request.auth.uid || isAdmin());
     }
 
     match /users/{userId} {
-      allow read, write: if isSignedIn() && userId == request.auth.uid;
+      allow read, write: if isSignedIn() && (userId == request.auth.uid || isAdmin());
     }
 
     match /case_analytics/{analyticsId} {
-      allow read: if isSignedIn() && resource.data.ownerId == request.auth.uid;
-      allow write: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow read: if isSignedIn() && (resource.data.ownerId == request.auth.uid || isAdmin());
+      allow write: if isSignedIn() && (request.resource.data.ownerId == request.auth.uid || isAdmin());
     }
   }
 }
