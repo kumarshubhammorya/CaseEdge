@@ -50,7 +50,7 @@ export const FinancialQuantifier: React.FC = () => {
         quantificationPrompt: result,
         tokens: Math.max(0, (prev.tokens ?? 50) - 5)
       }));
-      toast.success("Quantification scenario generated! (-5 🪙)");
+      toast.success("Quantification scenario generated! (-5 ⚡)");
     } catch (err: any) {
       toast.error("Failed to generate quantification prompt: " + (err?.message || ""));
     } finally {
@@ -72,7 +72,7 @@ export const FinancialQuantifier: React.FC = () => {
             className="bg-amber-500/10 hover:bg-amber-500/20 disabled:bg-slate-800 text-amber-500 border border-amber-500/30 text-[10px] uppercase font-bold px-3 py-1.5 rounded transition-colors flex items-center gap-1.5"
           >
             <Lightbulb className="w-3 h-3" />
-            {isGeneratingQuantPrompt ? "Analyzing..." : "AI Assistant (5 🪙)"}
+            {isGeneratingQuantPrompt ? "Analyzing..." : "AI Assistant (5 ⚡)"}
           </ShimmerButton>
         </Tooltip>
       </div>
@@ -147,7 +147,7 @@ export const FinancialQuantifier: React.FC = () => {
               </div>
             ))}
           </div>
-          <p className="text-[9px] text-slate-500 uppercase tracking-widest text-center mt-2">
+          <p className="text-[10px] text-slate-500 uppercase tracking-widest text-center mt-2">
             These are directional estimates for competition use — not financial advice.
           </p>
         </div>

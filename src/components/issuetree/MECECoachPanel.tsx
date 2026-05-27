@@ -32,7 +32,7 @@ export const MECECoachPanel: React.FC<MECECoachPanelProps> = ({
             {hasAiTree && (
               <button
                 onClick={onInitializeFromAI}
-                className="text-[9px] uppercase font-extrabold text-blue-400 hover:text-blue-300 transition-colors cursor-pointer"
+                className="text-[10px] uppercase font-extrabold text-blue-400 hover:text-blue-300 transition-colors cursor-pointer"
                 title="Initialize custom tree using the AI generated model"
               >
                 Copy AI Tree
@@ -40,7 +40,7 @@ export const MECECoachPanel: React.FC<MECECoachPanelProps> = ({
             )}
             <button
               onClick={onResetPlayground}
-              className="text-[9px] uppercase font-extrabold text-red-400 hover:text-red-300 transition-colors cursor-pointer"
+              className="text-[10px] uppercase font-extrabold text-red-400 hover:text-red-300 transition-colors cursor-pointer"
               title="Reset interactive playground"
             >
               Reset
@@ -110,11 +110,11 @@ export const MECECoachPanel: React.FC<MECECoachPanelProps> = ({
               {/* Overlaps & Gaps */}
               {meceFeedback.overlaps.length > 0 && (
                 <div className="space-y-2">
-                  <h4 className="text-[9px] uppercase font-bold text-amber-500 tracking-wider flex items-center gap-1">
+                  <h4 className="text-[10px] uppercase font-bold text-amber-500 tracking-wider flex items-center gap-1">
                     <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                     Overlaps (Redundant logic)
                   </h4>
-                  <ul className="text-[11px] space-y-1.5 pl-4 list-disc text-slate-300">
+                  <ul className="text-xs space-y-1.5 pl-4 list-disc text-slate-300">
                     {meceFeedback.overlaps.map((overlap, i) => (
                       <li key={i} className="leading-relaxed">{overlap}</li>
                     ))}
@@ -124,11 +124,11 @@ export const MECECoachPanel: React.FC<MECECoachPanelProps> = ({
 
               {meceFeedback.structuralGaps.length > 0 && (
                 <div className="space-y-2">
-                  <h4 className="text-[9px] uppercase font-bold text-blue-400 tracking-wider flex items-center gap-1">
+                  <h4 className="text-[10px] uppercase font-bold text-blue-400 tracking-wider flex items-center gap-1">
                     <Info className="w-3.5 h-3.5 shrink-0" />
                     Structural Gaps (Missing branches)
                   </h4>
-                  <ul className="text-[11px] space-y-1.5 pl-4 list-disc text-slate-300">
+                  <ul className="text-xs space-y-1.5 pl-4 list-disc text-slate-300">
                     {meceFeedback.structuralGaps.map((gap, i) => (
                       <li key={i} className="leading-relaxed">{gap}</li>
                     ))}

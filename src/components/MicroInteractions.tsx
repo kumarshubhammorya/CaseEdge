@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Check, Copy, Pencil } from 'lucide-react';
+import { motion, HTMLMotionProps } from 'motion/react';
 
 // --- Typewriter Effect ---
 // Prevents re-animating the same text globally.
@@ -64,10 +65,12 @@ export const ShimmerButton = ({
   className = '', 
   disabled,
   ...props 
-}: React.ButtonHTMLAttributes<HTMLButtonElement> & { isLoading?: boolean }) => {
+}: HTMLMotionProps<"button"> & { isLoading?: boolean }) => {
   return (
-    <button
-      className={`relative overflow-hidden ${className}`}
+    <motion.button
+      whileHover={disabled || isLoading ? {} : { scale: 1.015 }}
+      whileTap={disabled || isLoading ? {} : { scale: 0.98 }}
+      className={`relative overflow-hidden transition-colors focus-visible:ring-2 focus-visible:ring-[#00d4ff] focus-visible:ring-offset-2 focus-visible:outline-none focus-visible:ring-offset-slate-950 ${className}`}
       disabled={isLoading || disabled}
       data-loading={isLoading ? "true" : undefined}
       {...props}
@@ -80,7 +83,7 @@ export const ShimmerButton = ({
       <div className={isLoading ? 'opacity-80 flex items-center justify-center' : 'flex items-center justify-center gap-1.5'}>
         {children}
       </div>
-    </button>
+    </motion.button>
   );
 };
 
@@ -116,13 +119,19 @@ export const EditableField = ({
   onChange, 
   multiline = false,
   className = '',
-  textClassName = ''
+  textClassName = '',
+  autoFocus = false,
+  onFocusedReset,
+  onKeyDown
 }: { 
   value: string; 
   onChange: (v: string) => void; 
   multiline?: boolean;
   className?: string;
   textClassName?: string;
+  autoFocus?: boolean;
+  onFocusedReset?: () => void;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [localValue, setLocalValue] = useState(value);
@@ -131,6 +140,15 @@ export const EditableField = ({
   useEffect(() => {
     setLocalValue(value);
   }, [value]);
+
+  useEffect(() => {
+    if (autoFocus) {
+      setIsEditing(true);
+      if (onFocusedReset) {
+        onFocusedReset();
+      }
+    }
+  }, [autoFocus, onFocusedReset]);
 
   useEffect(() => {
     if (isEditing && inputRef.current) {
@@ -156,6 +174,14 @@ export const EditableField = ({
           onChange={e => setLocalValue(e.target.value)}
           onClick={e => e.stopPropagation()}
           onBlur={handleBlur}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              markAsAnimated(localValue);
+              onChange(localValue);
+              setIsEditing(false);
+            }
+            if (onKeyDown) onKeyDown(e);
+          }}
           className={`w-full bg-slate-900 border border-blue-500/50 outline-none text-slate-200 resize-none font-sans p-2 rounded-md ${className} focus:ring-2 focus:ring-blue-500/20 min-h-[80px]`}
         />
       );
@@ -168,6 +194,14 @@ export const EditableField = ({
         onChange={e => setLocalValue(e.target.value)}
         onClick={e => e.stopPropagation()}
         onBlur={handleBlur}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            markAsAnimated(localValue);
+            onChange(localValue);
+            setIsEditing(false);
+          }
+          if (onKeyDown) onKeyDown(e);
+        }}
         className={`w-full bg-slate-900 border border-blue-500/50 outline-none text-slate-200 font-sans p-2 rounded-md ${className} focus:ring-2 focus:ring-blue-500/20`}
       />
     );

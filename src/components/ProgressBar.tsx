@@ -77,7 +77,7 @@ export const ProgressBar: React.FC = () => {
                   <div className={`w-1.5 h-1.5 rounded-full transition-colors ${isActive ? 'bg-cyan-400' : 'bg-transparent'}`} />
                 )}
               </div>
-              <span className={`whitespace-nowrap text-[8px] uppercase tracking-wider font-bold transition-colors duration-300 ${
+              <span className={`whitespace-nowrap text-[10px] uppercase tracking-wider font-bold transition-colors duration-300 ${
                 isCompleted ? 'text-blue-400 text-opacity-80' : isActive ? 'text-slate-200' : 'text-slate-700'
               }`}>
                 {step.label}

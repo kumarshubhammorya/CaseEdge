@@ -32,7 +32,9 @@ const INITIAL_STATE: AppState = {
   userFrameworksInput: "",
   frameworksHintsCount: 0,
   socraticFeedback: null,
-  tokens: 50
+  tokens: 50,
+  isSessionCompleted: false,
+  focusedNodeId: null
 };
 
 interface AppContextProps {

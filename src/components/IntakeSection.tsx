@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
+import { motion } from 'motion/react';
 import { 
   analyzeCase, 
   generateHypothesis, 
@@ -16,7 +17,9 @@ import {
   ExternalLink, 
   MousePointer, 
   Trash2, 
-  X
+  X,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 import { CLASSIC_CASES } from './intake/ClassicCases';
 import { IntakeUploader } from './intake/IntakeUploader';
@@ -43,6 +46,7 @@ export const IntakeSection: React.FC<Props> = ({ onNext }) => {
 
   const [highlightMode, setHighlightMode] = useState(false);
   const [selectionCoords, setSelectionCoords] = useState<{ top: number; left: number; text: string } | null>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   // Toggle highlight mode automatically if case brief contains text
   useEffect(() => {
@@ -87,12 +91,18 @@ export const IntakeSection: React.FC<Props> = ({ onNext }) => {
   }, [selectionCoords]);
 
   const handleGenerateHypothesis = async () => {
+    if ((appState.tokens ?? 0) < 5) {
+      sounds.playError();
+      toast.error("Insufficient credits! You need at least 5 ⚡ to get an AI hypothesis suggestion.");
+      return;
+    }
     sounds.playClick();
     setIsGeneratingHypothesis(true);
     try {
       const result = await generateHypothesis(appState.caseBrief, appState.caseGlance?.coreProblem);
       setAiSuggestion(result);
-      toast.success("Hypothesis generated!");
+      setAppState(prev => ({ ...prev, tokens: Math.max(0, (prev.tokens ?? 50) - 5) }));
+      toast.success("Hypothesis generated! (-5 ⚡)");
     } catch (err: any) {
       sounds.playError();
       toast.error("Failed to generate hypothesis: " + (err?.message || "Unknown error"));
@@ -420,14 +430,14 @@ export const IntakeSection: React.FC<Props> = ({ onNext }) => {
               </div>
               <div>
                 <h4 className="text-xs font-bold text-blue-100 uppercase tracking-wide">Analyzing numerical data?</h4>
-                <p className="text-[11px] text-blue-300/70 mt-0.5 leading-normal">Use BI Edge to instantly create dashboards and get AI insights from your datasets.</p>
+                <p className="text-xs text-blue-300/70 mt-0.5 leading-normal">Use BI Edge to instantly create dashboards and get AI insights from your datasets.</p>
               </div>
             </div>
             <a 
               href="https://biedge.shubhammaurya.online/#/app" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="px-3 py-1.5 bg-blue-600/90 hover:bg-blue-500 text-white rounded text-[9px] font-bold uppercase tracking-widest transition-colors flex items-center justify-center gap-2 shrink-0 shadow-lg shadow-blue-900/20 cursor-pointer mr-2 sm:mr-0"
+              className="px-3 py-1.5 bg-blue-600/90 hover:bg-blue-500 text-white rounded text-[10px] font-bold uppercase tracking-widest transition-colors flex items-center justify-center gap-2 shrink-0 shadow-lg shadow-blue-900/20 cursor-pointer mr-2 sm:mr-0"
             >
               Launch BI Edge
               <ExternalLink className="w-3 h-3" />
@@ -462,21 +472,51 @@ export const IntakeSection: React.FC<Props> = ({ onNext }) => {
           <div className="flex flex-col lg:flex-row gap-6 items-stretch flex-1 min-h-0">
             {/* Highlighter Panel */}
             <div className="flex-1 flex flex-col bg-slate-900/35 border border-slate-800 rounded-xl p-5 relative min-h-0 overflow-hidden">
-              <div className="flex justify-between items-center mb-3 pb-2.5 border-b border-slate-800 shrink-0">
+              <div className="flex justify-between items-center mb-1 pb-1.5 border-b border-slate-800 shrink-0">
                 <span className="text-xs text-slate-400 font-extrabold uppercase tracking-widest flex items-center gap-1.5">
                   {!appState.caseGlance && <MousePointer className="w-3.5 h-3.5 text-cyan-400" />}
                   {appState.caseGlance ? "Case Brief" : "Active Reading: Highlight Clues"}
                 </span>
-                <button 
-                  onClick={() => {
-                    sounds.playClick();
-                    setAppState(prev => ({ ...prev, caseBrief: "", userClues: [], intakeFeedback: null, caseGlance: null }));
-                  }}
-                  className="text-[9px] uppercase font-bold text-red-500 hover:text-red-400 transition-colors cursor-pointer"
-                >
-                  Clear Case
-                </button>
+                <div className="flex items-center gap-4">
+                  {!appState.caseGlance && (
+                    <button
+                      onClick={() => {
+                        sounds.playClick();
+                        setIsExpanded(!isExpanded);
+                      }}
+                      className="text-[10px] uppercase font-bold text-cyan-400 hover:text-cyan-300 transition-colors cursor-pointer flex items-center gap-1.5"
+                      title={isExpanded ? "Collapse view" : "Expand to fullscreen"}
+                    >
+                      {isExpanded ? (
+                        <>
+                          <Minimize2 className="w-3.5 h-3.5" />
+                          <span>Split View</span>
+                        </>
+                      ) : (
+                        <>
+                          <Maximize2 className="w-3.5 h-3.5" />
+                          <span>Focus Mode</span>
+                        </>
+                      )}
+                    </button>
+                  )}
+                  <button 
+                    onClick={() => {
+                      sounds.playClick();
+                      setAppState(prev => ({ ...prev, caseBrief: "", userClues: [], intakeFeedback: null, caseGlance: null }));
+                      setIsExpanded(false);
+                    }}
+                    className="text-[10px] uppercase font-bold text-red-500 hover:text-red-400 transition-colors cursor-pointer"
+                  >
+                    Clear Case
+                  </button>
+                </div>
               </div>
+              {!appState.caseGlance && (
+                <p className="text-[10px] text-slate-550 mb-2.5 leading-normal">
+                  💡 Drag-select any word or sentence in the case brief below to tag it as an Objective, Constraint, Stakeholder, or Metric.
+                </p>
+              )}
 
               {/* Text highlighting container */}
               <div 
@@ -497,25 +537,25 @@ export const IntakeSection: React.FC<Props> = ({ onNext }) => {
                   >
                     <button
                       onClick={() => addHighlightClue('objective')}
-                      className="px-2 py-1 rounded bg-blue-600/20 text-blue-400 hover:bg-blue-600 hover:text-white border border-blue-500/30 text-[9px] font-extrabold uppercase tracking-wide cursor-pointer whitespace-nowrap"
+                      className="px-2 py-1 rounded bg-blue-600/20 text-blue-400 hover:bg-blue-600 hover:text-white border border-blue-500/30 text-[10px] font-extrabold uppercase tracking-wide cursor-pointer whitespace-nowrap"
                     >
                       🎯 Objective [O]
                     </button>
                     <button
                       onClick={() => addHighlightClue('constraint')}
-                      className="px-2 py-1 rounded bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white border border-red-500/30 text-[9px] font-extrabold uppercase tracking-wide cursor-pointer whitespace-nowrap"
+                      className="px-2 py-1 rounded bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white border border-red-500/30 text-[10px] font-extrabold uppercase tracking-wide cursor-pointer whitespace-nowrap"
                     >
                       ⚠️ Constraint [C]
                     </button>
                     <button
                       onClick={() => addHighlightClue('stakeholder')}
-                      className="px-2 py-1 rounded bg-green-600/20 text-green-400 hover:bg-green-600 hover:text-white border border-green-500/30 text-[9px] font-extrabold uppercase tracking-wide cursor-pointer whitespace-nowrap"
+                      className="px-2 py-1 rounded bg-green-600/20 text-green-400 hover:bg-green-600 hover:text-white border border-green-500/30 text-[10px] font-extrabold uppercase tracking-wide cursor-pointer whitespace-nowrap"
                     >
                       👥 Stakeholder [S]
                     </button>
                     <button
                       onClick={() => addHighlightClue('metric')}
-                      className="px-2 py-1 rounded bg-amber-600/20 text-amber-400 hover:bg-amber-600 hover:text-white border border-amber-500/30 text-[9px] font-extrabold uppercase tracking-wide cursor-pointer whitespace-nowrap"
+                      className="px-2 py-1 rounded bg-amber-600/20 text-amber-400 hover:bg-amber-600 hover:text-white border border-amber-500/30 text-[10px] font-extrabold uppercase tracking-wide cursor-pointer whitespace-nowrap"
                     >
                       📊 Metric [M]
                     </button>
@@ -526,7 +566,7 @@ export const IntakeSection: React.FC<Props> = ({ onNext }) => {
               {/* Tag list summary */}
               {appState.userClues && appState.userClues.length > 0 && (
                 <div className="shrink-0 pt-3 border-t border-slate-800">
-                  <span className="text-[9px] font-mono text-slate-500 uppercase tracking-widest block mb-2">
+                  <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest block mb-2">
                     Tagged Clues ({appState.userClues.length})
                   </span>
                   <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto custom-scrollbar pr-1">
@@ -554,7 +594,7 @@ export const IntakeSection: React.FC<Props> = ({ onNext }) => {
             </div>
 
             {/* AI Review Audit Panel */}
-            {!appState.caseGlance && (
+            {!appState.caseGlance && !isExpanded && (
               <IntakeCoachPanel
                 isAuditing={isAuditing}
                 isAnalyzing={isAnalyzing}
@@ -582,6 +622,7 @@ export const IntakeSection: React.FC<Props> = ({ onNext }) => {
             onGenerateHypothesis={handleGenerateHypothesis}
             onAdoptHypothesis={handleAdoptHypothesis}
             caseBrief={appState.caseBrief}
+            tokens={appState.tokens ?? 50}
           />
         )}
 
@@ -589,16 +630,19 @@ export const IntakeSection: React.FC<Props> = ({ onNext }) => {
         {appState.caseGlance && onNext && (
           <div className="flex justify-end pt-4 border-t border-slate-800 mt-6 shrink-0">
             <Tooltip content="Proceed to build an issue tree based on the extracted problem" position="top" className="inline-flex">
-              <button 
+              <motion.button 
                 onClick={() => {
                   sounds.playTransition();
                   if (onNext) onNext();
                 }}
-                className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-2 cursor-pointer"
+                whileHover={{ scale: 1.025 }}
+                whileTap={{ scale: 0.975 }}
+                transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                className="group bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-2 cursor-pointer focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:outline-none focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
               >
                 Continue to Issue Tree
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-              </button>
+                <svg className="w-4 h-4 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+              </motion.button>
             </Tooltip>
           </div>
         )}

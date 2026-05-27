@@ -17,7 +17,7 @@ export const UserGuide: React.FC<UserGuideProps> = ({ onClose }) => {
   const guideSteps = [
     {
       title: "Welcome to CaseEdge!",
-      desc: "This app helps you crack business cases in just 30 minutes. Earn 🪙 tokens by completing active learning tasks, and spend them to bypass steps when pressed for time. Let's see how it works!",
+      desc: "This app helps you crack business cases in just 30 minutes. Earn ⚡ credits by completing active learning tasks, and spend them to bypass steps when pressed for time. Let's see how it works!",
       icon: BookOpen,
       color: "text-blue-400"
     },
@@ -41,19 +41,19 @@ export const UserGuide: React.FC<UserGuideProps> = ({ onClose }) => {
     },
     {
       title: "Step 4: SCR Recommendation",
-      desc: "Draft top-down proposals (Situation, Complication, Resolution) using structured consulting templates (Scaffold Chips). Get AI drafting hints for 5 🪙.",
+      desc: "Draft top-down proposals (Situation, Complication, Resolution) using structured consulting templates (Scaffold Chips). Get AI drafting hints for 5 ⚡.",
       icon: CheckCircle,
       color: "text-orange-400"
     },
     {
       title: "Step 5: Assumptions & Risks",
-      desc: "Isolate unproven variables and risk assumptions. Spend 5 🪙 to automatically extract potential assumptions from your drafted recommendation.",
+      desc: "Isolate unproven variables and risk assumptions. Spend 5 ⚡ to automatically extract potential assumptions from your drafted recommendation.",
       icon: AlertTriangle,
       color: "text-rose-400"
     },
     {
       title: "Step 6: Financial Quantification",
-      desc: "Input quick sizing and payback estimates. Build confidence in your figures using the gated AI Quantification Assistant (Costs 5 🪙).",
+      desc: "Input quick sizing and payback estimates. Build confidence in your figures using the gated AI Quantification Assistant (Costs 5 ⚡).",
       icon: Zap,
       color: "text-amber-400"
     },
@@ -140,7 +140,7 @@ export const UserGuide: React.FC<UserGuideProps> = ({ onClose }) => {
                   {step === 0 ? 'Introduction' : `Feature ${step} of ${guideSteps.length - 1}`}
                 </div>
 
-                <h3 className="text-2xl md:text-3xl font-bold text-white mb-4 tracking-tight">
+                <h3 className="text-2xl md:text-3xl font-bold font-heading text-white mb-4 tracking-tight">
                   {guideSteps[step].title}
                 </h3>
                 <p className="text-slate-300 text-sm md:text-base leading-relaxed max-w-[280px] md:max-w-none mx-auto">

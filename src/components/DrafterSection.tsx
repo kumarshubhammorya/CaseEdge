@@ -40,7 +40,7 @@ export const DrafterSection: React.FC<Props> = ({ onNext, onGoToAssumptions, onG
       const result = await generateRecommendationHints(appState.caseBrief, appState.caseGlance?.coreProblem);
       setHints(result);
       setAppState(prev => ({ ...prev, tokens: Math.max(0, (prev.tokens ?? 50) - 5) }));
-      toast.success("AI hints generated! (-5 🪙)");
+      toast.success("AI hints generated! (-5 ⚡)");
     } catch (err: any) {
       toast.error("Failed to generate hints: " + (err?.message || ""));
     } finally {
@@ -139,7 +139,7 @@ export const DrafterSection: React.FC<Props> = ({ onNext, onGoToAssumptions, onG
                       className="bg-amber-500/10 hover:bg-amber-500/20 disabled:bg-slate-800 text-amber-500 border border-amber-500/30 text-[10px] uppercase font-bold px-3 py-1.5 rounded transition-colors flex items-center gap-1.5 cursor-pointer"
                     >
                       <Lightbulb className="w-3 h-3" />
-                      {isGeneratingHints ? "Generating..." : "Get AI Hints (5 🪙)"}
+                      {isGeneratingHints ? "Generating..." : "Get AI Hints (5 ⚡)"}
                     </ShimmerButton>
                   </Tooltip>
                 </div>
@@ -187,7 +187,7 @@ export const DrafterSection: React.FC<Props> = ({ onNext, onGoToAssumptions, onG
                             sounds.playClick();
                             setAppState(prev => ({ ...prev, recLead: "Acquire [Target] for $[Amount] to capture [Percent]% market share." }));
                           }}
-                          className="px-1.5 py-0.5 rounded bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-slate-200 text-[8px] font-bold transition-colors cursor-pointer border border-slate-700/50"
+                          className="px-1.5 py-0.5 rounded bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-slate-200 text-[10px] font-bold transition-colors cursor-pointer border border-slate-700/50"
                         >
                           Acquisition Outline
                         </button>
@@ -196,7 +196,7 @@ export const DrafterSection: React.FC<Props> = ({ onNext, onGoToAssumptions, onG
                             sounds.playClick();
                             setAppState(prev => ({ ...prev, recLead: "Enter the [Region] market via a [D2C/Wholesale] channel model." }));
                           }}
-                          className="px-1.5 py-0.5 rounded bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-slate-200 text-[8px] font-bold transition-colors cursor-pointer border border-slate-700/50"
+                          className="px-1.5 py-0.5 rounded bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-slate-200 text-[10px] font-bold transition-colors cursor-pointer border border-slate-700/50"
                         >
                           Market Entry Outline
                         </button>
@@ -227,7 +227,7 @@ export const DrafterSection: React.FC<Props> = ({ onNext, onGoToAssumptions, onG
                               sounds.playClick();
                               setAppState(prev => ({ ...prev, recPillar1: "Synergies will yield $[Amount] run-rate savings by Year [Number]." }));
                             }}
-                            className="px-1.5 py-0.5 rounded bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-slate-200 text-[8px] font-bold transition-colors cursor-pointer border border-slate-700/50"
+                            className="px-1.5 py-0.5 rounded bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-slate-200 text-[10px] font-bold transition-colors cursor-pointer border border-slate-700/50"
                           >
                             Synergies
                           </button>
@@ -236,7 +236,7 @@ export const DrafterSection: React.FC<Props> = ({ onNext, onGoToAssumptions, onG
                               sounds.playClick();
                               setAppState(prev => ({ ...prev, recPillar1: "Estimated TAM of $[Amount] supports a payback period of [Number] years." }));
                             }}
-                            className="px-1.5 py-0.5 rounded bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-slate-200 text-[8px] font-bold transition-colors cursor-pointer border border-slate-700/50"
+                            className="px-1.5 py-0.5 rounded bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-slate-200 text-[10px] font-bold transition-colors cursor-pointer border border-slate-700/50"
                           >
                             TAM/Payback
                           </button>
@@ -266,7 +266,7 @@ export const DrafterSection: React.FC<Props> = ({ onNext, onGoToAssumptions, onG
                               sounds.playClick();
                               setAppState(prev => ({ ...prev, recPillar2: "Reallocate [Percent]% of underutilized capacity to the new service." }));
                             }}
-                            className="px-1.5 py-0.5 rounded bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-slate-200 text-[8px] font-bold transition-colors cursor-pointer border border-slate-700/50"
+                            className="px-1.5 py-0.5 rounded bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-slate-200 text-[10px] font-bold transition-colors cursor-pointer border border-slate-700/50"
                           >
                             Capacity
                           </button>
@@ -275,7 +275,7 @@ export const DrafterSection: React.FC<Props> = ({ onNext, onGoToAssumptions, onG
                               sounds.playClick();
                               setAppState(prev => ({ ...prev, recPillar2: "Consolidate [Number] redundant hubs to optimize supply chain delivery." }));
                             }}
-                            className="px-1.5 py-0.5 rounded bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-slate-200 text-[8px] font-bold transition-colors cursor-pointer border border-slate-700/50"
+                            className="px-1.5 py-0.5 rounded bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-slate-200 text-[10px] font-bold transition-colors cursor-pointer border border-slate-700/50"
                           >
                             Logistics
                           </button>
@@ -306,7 +306,7 @@ export const DrafterSection: React.FC<Props> = ({ onNext, onGoToAssumptions, onG
                             sounds.playClick();
                             setAppState(prev => ({ ...prev, recRisk: "Risk: [Competition]. Mitigation: [Loyalty campaigns and long-term pricing contracts]." }));
                           }}
-                          className="px-1.5 py-0.5 rounded bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-slate-200 text-[8px] font-bold transition-colors cursor-pointer border border-slate-700/50"
+                          className="px-1.5 py-0.5 rounded bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-slate-200 text-[10px] font-bold transition-colors cursor-pointer border border-slate-700/50"
                         >
                           Competition Risk
                         </button>
@@ -315,7 +315,7 @@ export const DrafterSection: React.FC<Props> = ({ onNext, onGoToAssumptions, onG
                             sounds.playClick();
                             setAppState(prev => ({ ...prev, recRisk: "Risk: [Integration delay]. Mitigation: [Phased rollouts and dedicated transition team]." }));
                           }}
-                          className="px-1.5 py-0.5 rounded bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-slate-200 text-[8px] font-bold transition-colors cursor-pointer border border-slate-700/50"
+                          className="px-1.5 py-0.5 rounded bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-slate-200 text-[10px] font-bold transition-colors cursor-pointer border border-slate-700/50"
                         >
                           Execution Risk
                         </button>
@@ -342,7 +342,7 @@ export const DrafterSection: React.FC<Props> = ({ onNext, onGoToAssumptions, onG
                       sounds.playClick();
                       setIsFreeform(true);
                     }}
-                    className="text-[9px] uppercase font-bold text-slate-500 hover:text-slate-400 transition-colors cursor-pointer"
+                    className="text-[10px] uppercase font-bold text-slate-500 hover:text-slate-400 transition-colors cursor-pointer"
                   >
                     Switch to Freeform Mode
                   </button>
@@ -389,7 +389,7 @@ export const DrafterSection: React.FC<Props> = ({ onNext, onGoToAssumptions, onG
                       sounds.playClick();
                       setIsFreeform(false);
                     }}
-                    className="text-[9px] uppercase font-bold text-slate-500 hover:text-slate-400 transition-colors cursor-pointer"
+                    className="text-[10px] uppercase font-bold text-slate-500 hover:text-slate-400 transition-colors cursor-pointer"
                   >
                     Switch to Structured Pyramid Scaffolding
                   </button>

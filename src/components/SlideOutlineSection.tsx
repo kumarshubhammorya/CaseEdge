@@ -49,7 +49,13 @@ export const SlideOutlineSection = ({ onNext, onGoBack }: Props) => {
   const handleExport = async () => {
     sounds.playClick();
     if (!accessToken) {
-      await signIn();
+      try {
+        await signIn();
+      } catch (err: any) {
+        console.error("Sign in failed:", err);
+        toast.error("Sign in failed: " + (err?.message || "Unknown error"));
+        return;
+      }
       return;
     }
 
@@ -73,18 +79,35 @@ export const SlideOutlineSection = ({ onNext, onGoBack }: Props) => {
   };
 
   return (
-    <div className="h-full flex flex-col pt-4 sm:pt-0 animate-in fade-in slide-in-from-bottom-4">
-      <div className="px-6 pb-4 border-b border-slate-800 shrink-0">
-        <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-          <Presentation className="w-5 h-5 text-indigo-400" />
-          Slide Outline Generator
-        </h2>
-        <p className="text-sm text-slate-400 mt-1">
-          Map your recommendation to a structured 7-slide competition deck.
-        </p>
+    <section className="bg-[#0f172a] flex flex-col flex-1 min-h-0 border border-slate-800 rounded-lg overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-[#070b14]/50 shrink-0">
+        <div className="flex items-center gap-2">
+          <Presentation className="w-4 h-4 text-indigo-400" />
+          <h2 className="text-xs font-bold uppercase tracking-widest text-slate-500">
+            Slide Outline Generator
+          </h2>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+          <span className="text-[10px] text-slate-400 font-medium uppercase">Ready</span>
+        </div>
       </div>
 
-      <div className="p-6 space-y-6 flex-1 overflow-y-auto custom-scrollbar">
+      <div className="p-6 space-y-6 flex-1 overflow-y-auto custom-scrollbar flex flex-col min-h-0">
+        {appState.expandedRecommendation && (
+          <div className="bg-slate-900/30 border border-slate-800/80 p-4 rounded-lg flex items-start gap-3 shrink-0">
+            <div className="text-indigo-400 shrink-0">
+              <Presentation className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wide">Competition Deck Mapping</h4>
+              <p className="text-xs text-slate-450 mt-0.5 leading-normal font-sans">
+                Map your recommendation to a structured 7-slide competition deck.
+              </p>
+            </div>
+          </div>
+        )}
+
         {!appState.expandedRecommendation ? (
           <EmptyState 
             title="Awaiting Draft Recommendation"
@@ -189,21 +212,22 @@ export const SlideOutlineSection = ({ onNext, onGoBack }: Props) => {
             </div>
           </div>
         )}
-      </div>
 
-      <div className="p-6 border-t border-slate-800 shrink-0 bg-[#0f172a] sm:bg-transparent flex justify-end">
-        <button
-          onClick={() => {
-            sounds.playTransition();
-            onNext();
-          }}
-          className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 disabled:text-slate-500 text-white font-medium py-2.5 rounded-md transition-colors shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2"
-          style={{ width: '300px', height: '30px', marginLeft: 'auto' }}
-        >
-          <span>Continue to Judge Q&A</span>
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-        </button>
+        {appState.slideOutline && (
+          <div className="flex justify-end pt-4 border-t border-slate-800 mt-6 shrink-0 pb-2">
+            <button
+              onClick={() => {
+                sounds.playTransition();
+                onNext();
+              }}
+              className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-2 cursor-pointer"
+            >
+              <span>Continue to Judge Q&A</span>
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+            </button>
+          </div>
+        )}
       </div>
-    </div>
+    </section>
   );
 };

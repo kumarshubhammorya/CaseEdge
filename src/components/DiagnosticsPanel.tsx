@@ -120,7 +120,7 @@ export function DiagnosticsPanel() {
         >
           Latency
           {totalRequests > 0 && (
-            <span className="px-1.5 py-0.2 bg-slate-800 text-slate-300 rounded text-[9px]">
+            <span className="px-1.5 py-0.2 bg-slate-800 text-slate-300 rounded text-[10px]">
               {totalRequests}
             </span>
           )}
@@ -135,7 +135,7 @@ export function DiagnosticsPanel() {
         >
           Errors
           {errorCount > 0 && (
-            <span className="px-1.5 py-0.2 bg-red-950 text-red-400 border border-red-900/50 rounded text-[9px] animate-pulse">
+            <span className="px-1.5 py-0.2 bg-red-950 text-red-400 border border-red-900/50 rounded text-[10px] animate-pulse">
               {errorCount}
             </span>
           )}
@@ -171,14 +171,14 @@ export function DiagnosticsPanel() {
             {/* Performance Stats */}
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-slate-900/50 border border-slate-800 rounded-lg p-3 text-center">
-                <div className="text-slate-500 font-mono text-[9px] uppercase tracking-wider">Avg Latency</div>
+                <div className="text-slate-500 font-mono text-[10px] uppercase tracking-wider">Avg Latency</div>
                 <div className="text-2xl font-bold mt-1 text-cyan-400 font-mono">
                   {avgLatency}<span className="text-[10px] text-slate-500 ml-0.5">ms</span>
                 </div>
               </div>
               
               <div className="bg-slate-900/50 border border-slate-800 rounded-lg p-3 text-center">
-                <div className="text-slate-500 font-mono text-[9px] uppercase tracking-wider">Error Count</div>
+                <div className="text-slate-500 font-mono text-[10px] uppercase tracking-wider">Error Count</div>
                 <div className={`text-2xl font-bold mt-1 font-mono ${errorCount > 0 ? 'text-red-400 animate-pulse' : 'text-green-400'}`}>
                   {errorCount}
                 </div>
@@ -242,7 +242,7 @@ export function DiagnosticsPanel() {
                   >
                     <div className="flex flex-col gap-0.5 min-w-0">
                       <span className="font-mono font-semibold text-slate-300 truncate">{log.action}</span>
-                      <span className="text-[9px] text-slate-500 font-mono">{log.timestamp}</span>
+                      <span className="text-[10px] text-slate-500 font-mono">{log.timestamp}</span>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       {log.success ? (
@@ -277,20 +277,20 @@ export function DiagnosticsPanel() {
                     <span className="font-mono font-bold text-red-400 truncate pr-4">
                       {log.message}
                     </span>
-                    <span className="text-[8px] text-slate-500 font-mono shrink-0">
+                    <span className="text-[10px] text-slate-500 font-mono shrink-0">
                       {log.timestamp}
                     </span>
                   </div>
                   
                   {log.stack && (
-                    <div className="bg-slate-950/70 border border-slate-900 rounded p-1.5 text-[9px] font-mono text-slate-400 overflow-x-auto whitespace-pre select-all max-h-24 custom-scrollbar">
+                    <div className="bg-slate-950/70 border border-slate-900 rounded p-1.5 text-[10px] font-mono text-slate-400 overflow-x-auto whitespace-pre select-all max-h-24 custom-scrollbar">
                       {log.stack}
                     </div>
                   )}
 
                   {log.context && (
-                    <div className="text-[9px] font-mono text-slate-400 bg-slate-950/40 p-1.5 rounded">
-                      <span className="text-slate-500 font-bold uppercase block text-[8px] mb-0.5">Context:</span>
+                    <div className="text-[10px] font-mono text-slate-400 bg-slate-950/40 p-1.5 rounded">
+                      <span className="text-slate-500 font-bold uppercase block text-[10px] mb-0.5">Context:</span>
                       <pre className="overflow-x-auto whitespace-pre">{JSON.stringify(log.context, null, 2)}</pre>
                     </div>
                   )}
@@ -302,7 +302,7 @@ export function DiagnosticsPanel() {
       </div>
 
       {/* Footer */}
-      <div className="p-3 border-t border-slate-900 bg-slate-950/70 text-center font-mono text-[9px] text-slate-500 shrink-0 select-none">
+      <div className="p-3 border-t border-slate-900 bg-slate-950/70 text-center font-mono text-[10px] text-slate-500 shrink-0 select-none">
         Telemetry Hub v1.0.0
       </div>
     </div>

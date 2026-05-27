@@ -254,7 +254,7 @@ export const FrameworksSection: React.FC<{ onNext?: () => void; onGoBack?: () =>
                 ? 'Re-recommend Frameworks' 
                 : appState.socraticFeedback 
                 ? 'Unlock Recommendations (Free)' 
-                : 'Unlock Recommendations (15 🪙)'}
+                : 'Unlock Recommendations (15 ⚡)'}
             </ShimmerButton>
           )}
         </div>
@@ -360,7 +360,7 @@ export const FrameworksSection: React.FC<{ onNext?: () => void; onGoBack?: () =>
                     className="bg-amber-500/10 hover:bg-amber-500/20 disabled:bg-slate-800 text-amber-500 border border-amber-500/30 text-[10px] uppercase font-bold px-3 py-1.5 rounded transition-colors flex items-center gap-1.5 cursor-pointer"
                   >
                     <HelpCircle className="w-3.5 h-3.5" />
-                    Get Hint (Costs 2 🪙) ({(appState.frameworksHintsCount || 0)}/3)
+                    Get Hint (Costs 2 ⚡) ({(appState.frameworksHintsCount || 0)}/3)
                   </ShimmerButton>
                 </div>
                 <ShimmerButton
@@ -396,9 +396,9 @@ export const FrameworksSection: React.FC<{ onNext?: () => void; onGoBack?: () =>
                 <button
                   onClick={handleRecommend}
                   disabled={isRecommending || isEvaluating || isGettingHint || (appState.tokens ?? 0) < 15}
-                  className="text-[9px] uppercase font-bold text-slate-500 disabled:text-slate-700 hover:text-slate-400 transition-colors mt-4 text-center cursor-pointer block w-full border border-dashed border-slate-800 disabled:border-slate-900 p-2 rounded"
+                  className="text-[10px] uppercase font-bold text-slate-500 disabled:text-slate-700 hover:text-slate-450 transition-colors mt-4 text-center cursor-pointer block w-full border border-dashed border-slate-800 disabled:border-slate-900 p-2 rounded"
                 >
-                  Bypass & Auto-Generate (Costs 15 🪙)
+                  Bypass & Auto-Generate (Costs 15 ⚡)
                 </button>
               </div>
             </div>
@@ -420,13 +420,13 @@ export const FrameworksSection: React.FC<{ onNext?: () => void; onGoBack?: () =>
                   <div className="flex items-center gap-3">
                     <button
                       onClick={() => setIsCritiqueCollapsed(!isCritiqueCollapsed)}
-                      className="text-[9px] uppercase font-bold text-slate-500 hover:text-slate-400 transition-colors cursor-pointer"
+                      className="text-[10px] uppercase font-bold text-slate-500 hover:text-slate-450 transition-colors cursor-pointer"
                     >
                       {isCritiqueCollapsed ? 'Expand' : 'Collapse'}
                     </button>
                     <button
                       onClick={handleResetSocratic}
-                      className="text-[9px] uppercase font-extrabold text-red-400 hover:text-red-300 transition-colors cursor-pointer"
+                      className="text-[10px] uppercase font-extrabold text-red-400 hover:text-red-300 transition-colors cursor-pointer"
                     >
                       Reset Socratic logic
                     </button>
@@ -437,7 +437,7 @@ export const FrameworksSection: React.FC<{ onNext?: () => void; onGoBack?: () =>
                   <div className="flex flex-col md:flex-row gap-4 items-stretch animate-in fade-in duration-200">
                     {scoreFeedback !== null && (
                       <div className="flex flex-col items-center justify-center p-4 bg-slate-950/40 border border-slate-800 rounded-lg min-w-[100px] shrink-0">
-                        <span className="text-[8px] uppercase font-bold text-slate-500 mb-1">Logic Score</span>
+                        <span className="text-[10px] uppercase font-bold text-slate-500 mb-1">Logic Score</span>
                         <div className="text-2xl font-bold font-mono text-cyan-400">{scoreFeedback}</div>
                       </div>
                     )}
@@ -453,10 +453,10 @@ export const FrameworksSection: React.FC<{ onNext?: () => void; onGoBack?: () =>
             {appState.frameworks ? (
               <div className="space-y-4 pt-2 flex-1 overflow-y-auto">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 mb-2 shrink-0">
-                  <p className="text-[10px] md:text-[11px] uppercase text-slate-500 font-bold tracking-widest">
+                  <p className="text-[10px] md:text-xs uppercase text-slate-500 font-bold tracking-widest">
                     Recommended Frameworks
                   </p>
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#00d4ff]/5 border border-[#00d4ff]/20 text-[#00d4ff]/70 text-[9px] font-bold uppercase tracking-widest animate-[pulse_3s_ease-in-out_infinite]">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#00d4ff]/5 border border-[#00d4ff]/20 text-[#00d4ff]/70 text-[10px] font-bold uppercase tracking-widest animate-[pulse_3s_ease-in-out_infinite]">
                     <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" /></svg>
                     Hover cards to expand & select
                   </div>
@@ -486,7 +486,7 @@ export const FrameworksSection: React.FC<{ onNext?: () => void; onGoBack?: () =>
                             </h3>
                           </div>
                           <div className="mt-1">
-                            <p className="text-[11px] leading-relaxed text-slate-400">
+                            <p className="text-xs leading-relaxed text-slate-400">
                               <TypewriterText text={fw.whyItFits} />
                             </p>
                           </div>
@@ -495,7 +495,7 @@ export const FrameworksSection: React.FC<{ onNext?: () => void; onGoBack?: () =>
                         <div className="grid grid-rows-[0fr] group-hover:grid-rows-[1fr] transition-[grid-template-rows] duration-200">
                           <div className="overflow-hidden">
                             <div className="px-5 pb-5 pt-2 border-t border-slate-800/50 bg-slate-950/20">
-                              <p className="text-[9px] uppercase text-slate-500 font-bold tracking-wider mb-3">Diagnostic Questions</p>
+                              <p className="text-[10px] uppercase text-slate-500 font-bold tracking-wider mb-3">Diagnostic Questions</p>
                               <ul className="space-y-3">
                                 {fw.diagnosticQuestions.map((q, qIdx) => (
                                   <li key={qIdx} className="flex gap-2 items-start opacity-90">
@@ -550,7 +550,7 @@ export const FrameworksSection: React.FC<{ onNext?: () => void; onGoBack?: () =>
                       ? 'Generating...' 
                       : appState.socraticFeedback 
                       ? 'Unlock Recommendations (Free)' 
-                      : 'Bypass & Unlock (Costs 15 🪙)'}
+                      : 'Bypass & Unlock (Costs 15 ⚡)'}
                   </ShimmerButton>
                 </Tooltip>
               </div>

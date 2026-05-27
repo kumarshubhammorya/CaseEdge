@@ -79,7 +79,7 @@ const Flashcard: React.FC<{
           <div className="flex-1 overflow-y-auto pr-1 mb-2 custom-scrollbar flex flex-col gap-3">
             {/* Self-Assessment Rubric */}
             <div className="space-y-2 shrink-0">
-              <span className="text-[9px] font-mono text-cyan-400 font-extrabold uppercase tracking-widest block">
+              <span className="text-[10px] font-mono text-cyan-400 font-extrabold uppercase tracking-widest block">
                 Self-Assessment Rubric
               </span>
               <div className="space-y-1.5">
@@ -117,7 +117,7 @@ const Flashcard: React.FC<{
 
             {/* Model Answer Section */}
             <div className="flex-1 min-h-[80px] relative flex flex-col">
-              <span className="text-[9px] font-mono text-blue-400 font-extrabold uppercase tracking-widest block shrink-0 mb-1.5">
+              <span className="text-[10px] font-mono text-blue-400 font-extrabold uppercase tracking-widest block shrink-0 mb-1.5">
                 Model Answer
               </span>
               
@@ -142,7 +142,7 @@ const Flashcard: React.FC<{
                     <div className="p-1.5 rounded bg-slate-900/60 border border-slate-700 flex items-center text-slate-400">
                       <Lock className="w-3.5 h-3.5" />
                     </div>
-                    <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
                       Answer Locked
                     </span>
                     <button
@@ -158,9 +158,9 @@ const Flashcard: React.FC<{
                         toast.info("Answer revealed! (-5 tokens)");
                       }}
                       disabled={(appState.tokens ?? 0) < 5}
-                      className="text-[9px] uppercase font-extrabold bg-blue-600 hover:bg-blue-500 disabled:bg-slate-900 disabled:text-slate-600 disabled:border-slate-800 border border-transparent text-white py-1 px-3.5 rounded transition-all cursor-pointer shadow-md hover:shadow-lg"
+                      className="text-[10px] uppercase font-extrabold bg-blue-600 hover:bg-blue-500 disabled:bg-slate-900 disabled:text-slate-600 disabled:border-slate-800 border border-transparent text-white py-1 px-3.5 rounded transition-all cursor-pointer shadow-md hover:shadow-lg"
                     >
-                      Skip & Reveal Answer (Costs 5 🪙)
+                      Skip & Reveal Answer (Costs 5 ⚡)
                     </button>
                   </div>
                 )}
@@ -169,7 +169,7 @@ const Flashcard: React.FC<{
           </div>
           
           <div className="pt-3 border-t border-slate-700 flex justify-between items-center bg-slate-800/50 -mx-5 -mb-5 p-3.5 rounded-b-xl shrink-0">
-            <p className="text-[9px] text-slate-500 uppercase font-bold">How did you do?</p>
+            <p className="text-[10px] text-slate-500 uppercase font-bold">How did you do?</p>
             <div className="flex gap-2">
               <button
                 disabled={!revealed}
@@ -179,7 +179,7 @@ const Flashcard: React.FC<{
                   onStatusChange('need-practice');
                   setIsFlipped(false);
                 }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-[9px] uppercase font-bold transition-all border cursor-pointer ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-[10px] uppercase font-bold transition-all border cursor-pointer ${
                   !revealed
                     ? 'opacity-30 border-slate-750 text-slate-500 cursor-not-allowed'
                     : qa.status === 'need-practice' 
@@ -198,7 +198,7 @@ const Flashcard: React.FC<{
                   onStatusChange('got-it');
                   setIsFlipped(false);
                 }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-[9px] uppercase font-bold transition-all border cursor-pointer ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-[10px] uppercase font-bold transition-all border cursor-pointer ${
                   !revealed
                     ? 'opacity-30 border-slate-750 text-slate-500 cursor-not-allowed'
                     : qa.status === 'got-it' 
@@ -257,6 +257,15 @@ export const QASection: React.FC<{ onGoBack?: () => void }> = ({ onGoBack }) => 
   const gotItCount = appState.qas?.filter(q => q.status === 'got-it').length || 0;
   const totalCount = appState.qas?.length || 0;
   const progressPercent = totalCount > 0 ? (gotItCount / totalCount) * 100 : 0;
+
+  useEffect(() => {
+    if (progressPercent === 100 && totalCount > 0 && !appState.isSessionCompleted) {
+      setAppState(prev => ({ ...prev, isSessionCompleted: true }));
+      const count = parseInt(localStorage.getItem('caseedge_completed_sessions_count') || '0', 10);
+      localStorage.setItem('caseedge_completed_sessions_count', (count + 1).toString());
+      toast.success("Congratulations! Case session completed!");
+    }
+  }, [progressPercent, totalCount, appState.isSessionCompleted, setAppState]);
 
   const loadingMessages = [
     "Adopting judge persona...",
@@ -385,19 +394,6 @@ export const QASection: React.FC<{ onGoBack?: () => void }> = ({ onGoBack }) => 
         }
         .backface-hidden {
           backface-visibility: hidden;
-        }
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #1e293b;
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: #334155;
         }
       `}} />
     </section>

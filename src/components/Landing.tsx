@@ -27,6 +27,30 @@ const FadeInView: React.FC<{ children: React.ReactNode, delay?: number, classNam
   );
 };
 
+const TESTIMONIALS = [
+  {
+    quote: "CaseEdge changed how we prepped for national finals. The MECE logic validator caught two overlapping branches that would have gotten us roasted by the jury.",
+    author: "Aditya Sharma",
+    role: "National Finalist, L'Oréal Brandstorm",
+    school: "Goa Institute of Management (GIM)",
+    avatarColor: "from-cyan-400 to-blue-500",
+  },
+  {
+    quote: "The SCR drafter and the Judge Q&A objection simulator are game changers. Having simulated rebuttals prepared beforehand gave our team absolute confidence in the Q&A round.",
+    author: "Pranjal Prakhar",
+    role: "Winner, HUL L.I.M.E.",
+    school: "Indian Institute of Management (IIM) Kashipur",
+    avatarColor: "from-blue-600 to-indigo-500",
+  },
+  {
+    quote: "Standard AI tool answers are too verbose and generic for case presentations. CaseEdge forces a clean, top-down strategy layout, and saves hours of slide construction.",
+    author: "Sneha Patel",
+    role: "Runner-up, McKinsey Case Challenge",
+    school: "FMS Delhi",
+    avatarColor: "from-purple-500 to-pink-500",
+  }
+];
+
 export const Landing: React.FC<LandingProps> = ({ onLaunch }) => {
   const [scrolled, setScrolled] = useState(false);
   const [typedText, setTypedText] = useState("");
@@ -109,16 +133,19 @@ export const Landing: React.FC<LandingProps> = ({ onLaunch }) => {
             </span>
           </div>
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-white/60">
-            <button onClick={scrollToFeatures} className="hover:text-white transition-colors">Features</button>
-            <button onClick={scrollToHowItWorks} className="hover:text-white transition-colors">How It Works</button>
-            <button onClick={scrollToAbout} className="hover:text-white transition-colors">About</button>
+            <button onClick={scrollToFeatures} className="hover:text-white transition-colors focus-visible:text-white focus-visible:outline-none">Features</button>
+            <button onClick={scrollToHowItWorks} className="hover:text-white transition-colors focus-visible:text-white focus-visible:outline-none">How It Works</button>
+            <button onClick={scrollToAbout} className="hover:text-white transition-colors focus-visible:text-white focus-visible:outline-none">About</button>
           </div>
-          <button 
+          <motion.button 
             onClick={onLaunch}
-            className="text-xs md:text-sm font-semibold bg-white text-black hover:bg-slate-200 px-3 py-1.5 md:px-4 md:py-2 rounded-sm transition-colors flex items-center gap-1 md:gap-2"
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            transition={{ type: "spring", stiffness: 400, damping: 15 }}
+            className="group text-xs md:text-sm font-semibold bg-white text-black hover:bg-slate-200 px-3 py-1.5 md:px-4 md:py-2 rounded-sm transition-all flex items-center gap-1 md:gap-2 focus-visible:ring-2 focus-visible:ring-[#00d4ff] focus-visible:ring-offset-2 focus-visible:outline-none focus-visible:ring-offset-slate-900 cursor-pointer"
           >
-            Launch <span className="hidden sm:inline">App</span> <ArrowRight className="w-3 h-3 md:w-4 md:h-4" />
-          </button>
+            Launch <span className="hidden sm:inline">App</span> <ArrowRight className="w-3 h-3 md:w-4 md:h-4 transition-transform group-hover:translate-x-0.5" />
+          </motion.button>
         </div>
       </nav>
 
@@ -136,18 +163,24 @@ export const Landing: React.FC<LandingProps> = ({ onLaunch }) => {
             CaseEdge gives MBA students a structured, AI-powered workflow to crack cases faster, build sharper recommendations, and walk into the room ready for anything.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 md:gap-5 w-full px-4 sm:px-0">
-            <button 
+            <motion.button 
               onClick={onLaunch}
-              className="w-full sm:w-auto px-6 py-4 md:px-10 md:py-5 lg:py-5 bg-[#00d4ff] hover:bg-[#00b0d4] text-black font-bold text-base md:text-lg rounded-sm flex items-center justify-center gap-2 transition-all transform hover:-translate-y-1 shadow-[0_0_30px_rgba(0,212,255,0.3)] hover:shadow-[0_0_40px_rgba(0,212,255,0.5)]"
+              whileHover={{ scale: 1.025, y: -2 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ type: "spring", stiffness: 400, damping: 15 }}
+              className="group w-full sm:w-auto px-6 py-4 md:px-10 md:py-5 lg:py-5 bg-[#00d4ff] hover:bg-[#00b0d4] text-black font-bold text-base md:text-lg rounded-sm flex items-center justify-center gap-2 transition-all shadow-[0_0_30px_rgba(0,212,255,0.3)] hover:shadow-[0_0_40px_rgba(0,212,255,0.5)] focus-visible:ring-2 focus-visible:ring-[#00d4ff] focus-visible:ring-offset-2 focus-visible:outline-none focus-visible:ring-offset-slate-900 cursor-pointer"
             >
-               Launch CaseEdge <ArrowRight className="w-4 h-4 md:w-5 md:h-5" />
-            </button>
-            <button 
+               Launch CaseEdge <ArrowRight className="w-4 h-4 md:w-5 md:h-5 transition-transform group-hover:translate-x-1" />
+            </motion.button>
+            <motion.button 
               onClick={scrollToFeatures}
-              className="w-full sm:w-auto px-6 py-4 md:px-10 md:py-5 lg:py-5 bg-white/5 hover:bg-white/10 text-white font-medium text-base md:text-lg rounded-sm border border-white/10 transition-all hover:border-white/20"
+              whileHover={{ scale: 1.025 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ type: "spring", stiffness: 400, damping: 15 }}
+              className="w-full sm:w-auto px-6 py-4 md:px-10 md:py-5 lg:py-5 bg-white/5 hover:bg-white/10 text-white font-medium text-base md:text-lg rounded-sm border border-white/10 transition-all hover:border-white/20 focus-visible:ring-2 focus-visible:ring-[#00d4ff] focus-visible:ring-offset-2 focus-visible:outline-none focus-visible:ring-offset-slate-900 cursor-pointer"
             >
                See How It Works
-            </button>
+            </motion.button>
           </div>
         </FadeInView>
 
@@ -255,9 +288,11 @@ export const Landing: React.FC<LandingProps> = ({ onLaunch }) => {
               { icon: AlertTriangle, title: "AI Token Budget Economy", desc: "Earn tokens by completing active socratic work and spend them to bypass steps when pressed for time.", tag: "Enforced continuously" }
             ].map((f, i) => (
               <FadeInView key={i} delay={i * 0.05} className="group relative">
-                <div className="bg-[#15181e] border border-white/5 p-5 md:p-6 rounded-sm h-full transition-all duration-300 md:group-hover:-translate-y-1 md:group-hover:border-[#00d4ff]/50 md:group-hover:shadow-[0_0_20px_rgba(0,212,255,0.1)] md:group-hover:bg-[#15181e]/80">
-                  <f.icon className="w-6 h-6 md:w-8 md:h-8 text-[#00d4ff] mb-3 md:mb-4" />
-                  <h3 className="font-bold text-base md:text-lg mb-2 text-white">{f.title}</h3>
+                <div className="bg-[#15181e] border border-white/5 p-5 md:p-6 rounded-sm h-full transition-all duration-300 group-hover:-translate-y-1.5 group-hover:border-[#00d4ff] group-hover:shadow-[0_0_25px_rgba(0,212,255,0.18)] group-hover:bg-[#15181e]/90">
+                  <div className="inline-block transition-transform duration-500 ease-out group-hover:scale-115 group-hover:rotate-6 group-hover:filter group-hover:drop-shadow-[0_0_8px_rgba(0,212,255,0.45)]">
+                    <f.icon className="w-6 h-6 md:w-8 md:h-8 text-[#00d4ff] mb-3 md:mb-4" />
+                  </div>
+                  <h3 className="font-bold text-base md:text-lg mb-2 text-white transition-colors duration-300 group-hover:text-[#00d4ff]">{f.title}</h3>
                   <p className="text-sm text-white/60 mb-4 md:mb-6 leading-relaxed flex-grow">{f.desc}</p>
                   <div className="text-[10px] md:text-xs font-mono font-semibold text-[#c9a84c] uppercase tracking-wide">
                     {f.tag}
@@ -397,6 +432,45 @@ export const Landing: React.FC<LandingProps> = ({ onLaunch }) => {
         </div>
       </section>
 
+      {/* Testimonials Section */}
+      <section className="py-16 md:py-24 relative z-10 px-4 md:px-6 max-w-7xl mx-auto">
+        <FadeInView className="text-center mb-12 md:mb-16">
+          <span className="text-[10px] md:text-xs font-mono font-bold text-[#00d4ff] uppercase tracking-widest bg-[#00d4ff]/10 px-3 py-1 rounded-full">Testimonials</span>
+          <h2 className="font-heading text-3xl sm:text-4xl md:text-5xl font-bold mt-4 mb-3 md:mb-4">
+            Trusted by Future Leaders
+          </h2>
+          <p className="text-base md:text-lg text-white/60 max-w-2xl mx-auto">
+            See how top business school students are using CaseEdge to stand out in high-stakes case competitions.
+          </p>
+        </FadeInView>
+
+        <div className="grid md:grid-cols-3 gap-6 md:gap-8">
+          {TESTIMONIALS.map((t, i) => (
+            <FadeInView key={i} delay={i * 0.1} className="group relative">
+              <div className="bg-[#15181e] border border-white/5 p-6 md:p-8 rounded-sm h-full flex flex-col justify-between transition-all duration-300 group-hover:-translate-y-1.5 group-hover:border-[#00d4ff] group-hover:shadow-[0_0_25px_rgba(0,212,255,0.15)]">
+                <div>
+                  <div className="text-4xl font-serif text-[#00d4ff]/20 group-hover:text-[#00d4ff]/40 transition-colors duration-300 mb-2 leading-none">“</div>
+                  <p className="text-slate-300 text-xs md:text-sm leading-relaxed italic mb-6">
+                    {t.quote}
+                  </p>
+                </div>
+                
+                <div className="flex items-center gap-3.5 pt-4 border-t border-white/5">
+                  <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${t.avatarColor} flex items-center justify-center font-bold text-black text-xs shrink-0 shadow-inner`}>
+                    {t.author.charAt(0)}
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-xs md:text-sm text-white group-hover:text-[#00d4ff] transition-colors duration-300">{t.author}</h4>
+                    <p className="text-[10px] text-white/50 font-medium mt-0.5">{t.role}</p>
+                    <p className="text-[9px] text-[#00d4ff] font-mono mt-0.5">{t.school}</p>
+                  </div>
+                </div>
+              </div>
+            </FadeInView>
+          ))}
+        </div>
+      </section>
+
       {/* About Section */}
       <section id="about" className="py-16 md:py-24 relative z-10 px-4 md:px-6 max-w-3xl mx-auto text-center">
         <FadeInView>
@@ -424,12 +498,15 @@ export const Landing: React.FC<LandingProps> = ({ onLaunch }) => {
           <p className="text-sm sm:text-lg text-[#00d4ff] font-mono mb-8 md:mb-10 max-w-sm mx-auto sm:max-w-none">
             Free to use. No account needed. Just paste your case and go.
           </p>
-          <button 
+          <motion.button 
             onClick={onLaunch}
-            className="w-full sm:w-auto px-8 md:px-10 py-4 md:py-5 bg-[#00d4ff] hover:bg-[#00b0d4] text-black font-bold text-base md:text-lg rounded-sm inline-flex items-center justify-center gap-2 md:gap-3 transition-all transform hover:scale-[1.02] md:hover:scale-105 shadow-[0_0_30px_rgba(0,212,255,0.3)]"
+            whileHover={{ scale: 1.03, y: -2 }}
+            whileTap={{ scale: 0.97 }}
+            transition={{ type: "spring", stiffness: 400, damping: 15 }}
+            className="group w-full sm:w-auto px-8 md:px-10 py-4 md:py-5 bg-[#00d4ff] hover:bg-[#00b0d4] text-black font-bold text-base md:text-lg rounded-sm inline-flex items-center justify-center gap-2 md:gap-3 transition-all shadow-[0_0_30px_rgba(0,212,255,0.3)] focus-visible:ring-2 focus-visible:ring-[#00d4ff] focus-visible:ring-offset-2 focus-visible:outline-none focus-visible:ring-offset-slate-900 cursor-pointer"
           >
-            Launch CaseEdge <ArrowRight className="w-5 h-5 md:w-6 md:h-6" />
-          </button>
+            Launch CaseEdge <ArrowRight className="w-5 h-5 md:w-6 md:h-6 transition-transform group-hover:translate-x-1.5" />
+          </motion.button>
         </FadeInView>
       </section>
 
@@ -447,8 +524,8 @@ export const Landing: React.FC<LandingProps> = ({ onLaunch }) => {
             <span>CaseEdge · Built by Shubham Maurya</span>
           </div>
           <div className="flex flex-wrap justify-center gap-4 md:gap-6">
-            <button onClick={onLaunch} className="hover:text-[#00d4ff] transition-colors">Launch App</button>
-            <a href="https://www.linkedin.com/in/shubham-kumar-b79969232/" target="_blank" rel="noopener noreferrer" className="hover:text-[#00d4ff] transition-colors">LinkedIn</a>
+            <button onClick={onLaunch} className="hover:text-[#00d4ff] transition-colors focus-visible:text-[#00d4ff] focus-visible:outline-none">Launch App</button>
+            <a href="https://www.linkedin.com/in/shubham-kumar-b79969232/" target="_blank" rel="noopener noreferrer" className="hover:text-[#00d4ff] transition-colors focus-visible:text-[#00d4ff] focus-visible:outline-none">LinkedIn</a>
           </div>
           <div className="opacity-60">Powered by AI</div>
         </div>

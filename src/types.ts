@@ -100,6 +100,8 @@ export type AppState = {
   frameworksHintsCount?: number;
   socraticFeedback?: string | null;
   tokens: number;
+  isSessionCompleted?: boolean;
+  focusedNodeId?: string | null;
 };
 
 export type UserClue = {

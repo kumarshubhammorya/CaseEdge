@@ -63,7 +63,7 @@ export const AudienceCalibrator: React.FC = () => {
         {appState.calibratedRecommendation && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="p-3 border border-slate-800 bg-slate-900/30 rounded">
-              <p className="text-[9px] text-slate-500 uppercase tracking-widest font-bold mb-2">Original</p>
+              <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-2">Original</p>
               <p className="text-xs text-slate-400 whitespace-pre-wrap">
                 {appState.expandedRecommendation 
                   ? `Situation: ${appState.expandedRecommendation.situation}\nComplication: ${appState.expandedRecommendation.complication}\nResolution: ${appState.expandedRecommendation.resolution}`
@@ -71,7 +71,7 @@ export const AudienceCalibrator: React.FC = () => {
               </p>
             </div>
             <div className="p-3 border border-blue-500/30 bg-blue-500/5 rounded relative group">
-              <p className="text-[9px] text-blue-400 uppercase tracking-widest font-bold mb-2">Calibrated for {appState.jargonAudience}</p>
+              <p className="text-[10px] text-blue-400 uppercase tracking-widest font-bold mb-2">Calibrated for {appState.jargonAudience}</p>
               <div className="pr-8">
                 <EditableField
                    value={appState.calibratedRecommendation}

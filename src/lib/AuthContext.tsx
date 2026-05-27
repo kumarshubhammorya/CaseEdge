@@ -1,15 +1,17 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { auth } from './firebase';
-import { onAuthStateChanged, User, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
+import { onAuthStateChanged, User, GoogleAuthProvider, signInWithPopup, signOut, signInAnonymously, linkWithPopup } from 'firebase/auth';
 
 const AuthContext = createContext<{ 
   user: User | null; 
   accessToken: string | null;
+  loading: boolean;
   signIn: () => Promise<void>; 
   logout: () => Promise<void>; 
 }>({ 
   user: null, 
   accessToken: null,
+  loading: true,
   signIn: async () => {}, 
   logout: async () => {} 
 });
@@ -20,6 +22,7 @@ export const getAccessToken = () => cachedAccessToken;
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
@@ -27,6 +30,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!u) {
         cachedAccessToken = null;
         setAccessToken(null);
+        setLoading(true);
+        // Automatically establish silent anonymous session if not logged in
+        signInAnonymously(auth).catch((err) => {
+          console.error("Failed silent anonymous sign in", err);
+          setLoading(false);
+        });
+      } else {
+        setLoading(false);
       }
     });
     return () => unsubscribe();
@@ -38,7 +49,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     provider.addScope('https://www.googleapis.com/auth/drive.file');
     provider.setCustomParameters({ prompt: 'select_account' });
     try {
-      const result = await signInWithPopup(auth, provider);
+      let result;
+      if (auth.currentUser && auth.currentUser.isAnonymous) {
+        try {
+          result = await linkWithPopup(auth.currentUser, provider);
+        } catch (linkError: any) {
+          if (linkError.code === 'auth/credential-already-in-use' || linkError.code === 'auth/email-already-in-use') {
+            console.warn("Google account already linked to another user. Logging in directly.");
+            result = await signInWithPopup(auth, provider);
+          } else {
+            throw linkError;
+          }
+        }
+      } else {
+        result = await signInWithPopup(auth, provider);
+      }
       const credential = GoogleAuthProvider.credentialFromResult(result);
       if (credential?.accessToken) {
         cachedAccessToken = credential.accessToken;
@@ -60,7 +85,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  return <AuthContext.Provider value={{ user, accessToken, signIn, logout }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ user, accessToken, loading, signIn, logout }}>{children}</AuthContext.Provider>;
 }
 
 export const useAuth = () => useContext(AuthContext);

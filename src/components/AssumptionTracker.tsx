@@ -57,7 +57,7 @@ export const AssumptionTracker = ({ onGoBack }: Props) => {
         tokens: Math.max(0, (prev.tokens ?? 50) - 5)
       }));
       sounds.playSuccess();
-      toast.success("Assumptions extracted successfully! (-5 🪙)");
+      toast.success("Assumptions extracted successfully! (-5 ⚡)");
     } catch (err) {
       console.error(err);
       toast.error("Failed to extract assumptions.");
@@ -106,7 +106,7 @@ export const AssumptionTracker = ({ onGoBack }: Props) => {
     <section className="bg-[#0f172a] flex flex-col flex-1 min-h-0 border border-slate-800 rounded-lg overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="p-4 sm:p-5 border-b border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#070b14]/50 shrink-0">
         <div>
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
+          <h2 className="text-xl font-bold font-heading text-white flex items-center gap-2">
             <Database className="w-5 h-5 text-blue-500" />
             Assumption Tracker
           </h2>
@@ -126,7 +126,7 @@ export const AssumptionTracker = ({ onGoBack }: Props) => {
               ) : (
                 <>
                   <Wand2 className="w-4 h-4" />
-                  Extract from Recommendation (5 🪙)
+                  Extract from Recommendation (5 ⚡)
                 </>
               )}
             </ShimmerButton>
@@ -241,7 +241,7 @@ export const AssumptionTracker = ({ onGoBack }: Props) => {
                         <div className="flex flex-col items-center gap-3 animate-pulse opacity-40">
                           <AlertTriangle className="w-12 h-12 text-slate-600" />
                           <div>
-                            <p className="text-slate-400 font-medium font-mono text-xs uppercase tracking-widest">No assumptions tracked</p>
+                            <p className="text-slate-400 font-medium text-xs uppercase tracking-widest">No assumptions tracked</p>
                             <p className="text-slate-600 text-xs mt-1">Generate from recommendation or add manually.</p>
                           </div>
                         </div>
@@ -260,7 +260,7 @@ export const AssumptionTracker = ({ onGoBack }: Props) => {
                   </div>
                   <h4 className="text-xs font-bold text-slate-300 uppercase tracking-widest">Why this matters</h4>
                 </div>
-                <p className="text-[11px] text-slate-500 leading-relaxed">
+                <p className="text-xs text-slate-500 leading-relaxed">
                   In MBB competitions, identifying what *must* be true for your plan to work shows maturity and risk awareness. Judges often probe your worst-case scenarios.
                 </p>
               </div>
@@ -272,7 +272,7 @@ export const AssumptionTracker = ({ onGoBack }: Props) => {
                   </div>
                   <h4 className="text-xs font-bold text-slate-300 uppercase tracking-widest">Killer Assumption</h4>
                 </div>
-                <p className="text-[11px] text-slate-500 leading-relaxed">
+                <p className="text-xs text-slate-500 leading-relaxed">
                   The "Killer Assumption" is the one that, if proven false, makes the entire recommendation fail. Focus your sensitivity analysis here.
                 </p>
               </div>
@@ -284,7 +284,7 @@ export const AssumptionTracker = ({ onGoBack }: Props) => {
                   </div>
                   <h4 className="text-xs font-bold text-slate-300 uppercase tracking-widest">Pro Tip</h4>
                 </div>
-                <p className="text-[11px] text-slate-500 leading-relaxed">
+                <p className="text-xs text-slate-500 leading-relaxed">
                   Don't just list assumptions. Use them to justify your "Risk Mitigation" slide. Every High Risk items should have an owner or action.
                 </p>
               </div>

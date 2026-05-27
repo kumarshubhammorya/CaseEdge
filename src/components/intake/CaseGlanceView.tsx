@@ -13,6 +13,7 @@ type CaseGlanceViewProps = {
   onGenerateHypothesis: () => void;
   onAdoptHypothesis: () => void;
   caseBrief: string;
+  tokens: number;
 };
 
 export const CaseGlanceView: React.FC<CaseGlanceViewProps> = ({
@@ -25,6 +26,7 @@ export const CaseGlanceView: React.FC<CaseGlanceViewProps> = ({
   onGenerateHypothesis,
   onAdoptHypothesis,
   caseBrief,
+  tokens,
 }) => {
   return (
     <div className="space-y-4 animate-in fade-in pt-4 border-t border-slate-800">
@@ -35,7 +37,7 @@ export const CaseGlanceView: React.FC<CaseGlanceViewProps> = ({
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="p-3 border border-slate-800 rounded bg-slate-900/30">
-          <p className="text-[9px] uppercase text-slate-500 font-bold mb-1">Industry</p>
+          <p className="text-[10px] uppercase text-slate-500 font-bold mb-1">Industry</p>
           <EditableField
             value={caseGlance.industry}
             onChange={(val) => onUpdateGlance('industry', val)}
@@ -43,7 +45,7 @@ export const CaseGlanceView: React.FC<CaseGlanceViewProps> = ({
           />
         </div>
         <div className="p-3 border border-slate-800 rounded bg-slate-900/30">
-          <p className="text-[9px] uppercase text-slate-500 font-bold mb-1">Case Type</p>
+          <p className="text-[10px] uppercase text-slate-500 font-bold mb-1">Case Type</p>
           <EditableField
             value={caseGlance.caseType}
             onChange={(val) => onUpdateGlance('caseType', val)}
@@ -51,7 +53,7 @@ export const CaseGlanceView: React.FC<CaseGlanceViewProps> = ({
           />
         </div>
         <div className="p-3 border border-slate-800 rounded bg-slate-900/30 col-span-1 md:col-span-2">
-          <p className="text-[9px] uppercase text-slate-500 font-bold mb-1">Core Problem</p>
+          <p className="text-[10px] uppercase text-slate-500 font-bold mb-1">Core Problem</p>
           <EditableField
             value={caseGlance.coreProblem}
             onChange={(val) => onUpdateGlance('coreProblem', val)}
@@ -63,7 +65,7 @@ export const CaseGlanceView: React.FC<CaseGlanceViewProps> = ({
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-1.5">
-          <p className="text-[9px] uppercase text-slate-500 font-bold">Key Stakeholders</p>
+          <p className="text-[10px] uppercase text-slate-500 font-bold">Key Stakeholders</p>
           <EditableListField
             items={caseGlance.keyStakeholders}
             onChange={(val) => onUpdateGlance('keyStakeholders', val)}
@@ -72,7 +74,7 @@ export const CaseGlanceView: React.FC<CaseGlanceViewProps> = ({
           />
         </div>
         <div className="space-y-1.5">
-          <p className="text-[9px] uppercase text-slate-500 font-bold">Key Constraints</p>
+          <p className="text-[10px] uppercase text-slate-500 font-bold">Key Constraints</p>
           <EditableListField
             items={caseGlance.keyConstraints}
             onChange={(val) => onUpdateGlance('keyConstraints', val)}
@@ -104,19 +106,19 @@ export const CaseGlanceView: React.FC<CaseGlanceViewProps> = ({
         <div className="flex justify-between items-center mt-2">
           <div>
             <h3 className="text-xs font-bold uppercase tracking-widest text-purple-400 flex items-center gap-2">
-              <Zap className="w-3.5 h-3.5" />
+              <Zap className="w-3.5 h-3.5 text-cyan-400 fill-cyan-400/20 shrink-0" />
               Day-One Hypothesis <span className="text-[10px] text-slate-500 font-normal uppercase tracking-widest">(Optional)</span>
             </h3>
-            <p className="text-[11px] text-slate-400 mt-1">Formulate a testable starting hypothesis to guide the tree.</p>
+            <p className="text-xs text-slate-400 mt-1">Formulate a testable starting hypothesis to guide the tree.</p>
           </div>
           <ShimmerButton
             onClick={onGenerateHypothesis}
-            disabled={isGeneratingHypothesis || !caseBrief}
+            disabled={isGeneratingHypothesis || !caseBrief || (tokens ?? 0) < 5}
             isLoading={isGeneratingHypothesis}
-            className="bg-purple-500/10 hover:bg-purple-500/20 disabled:bg-slate-800 text-purple-400 border border-purple-500/30 text-[9px] uppercase font-bold px-3 py-1.5 rounded transition-colors flex items-center gap-1.5 shrink-0 ml-4 cursor-pointer"
+            className="bg-purple-500/10 hover:bg-purple-500/20 disabled:bg-slate-800 text-purple-400 border border-purple-500/30 text-[10px] uppercase font-bold px-3 py-1.5 rounded transition-colors flex items-center gap-1.5 shrink-0 ml-4 cursor-pointer"
           >
             <Lightbulb className="w-3 h-3" />
-            {isGeneratingHypothesis ? "Analyzing..." : "AI Suggestion"}
+            {isGeneratingHypothesis ? "Analyzing..." : "AI Suggestion (5 ⚡)"}
           </ShimmerButton>
         </div>
 
@@ -130,12 +132,12 @@ export const CaseGlanceView: React.FC<CaseGlanceViewProps> = ({
         {aiSuggestion && (
           <div className="p-4 border border-purple-500/30 bg-purple-900/10 rounded-lg space-y-3 animate-in fade-in">
             <div>
-              <span className="text-[9px] text-purple-400 font-bold uppercase tracking-widest mb-1 block">Suggested Hypothesis</span>
+              <span className="text-[10px] text-purple-400 font-bold uppercase tracking-widest mb-1 block">Suggested Hypothesis</span>
               <p className="text-xs text-slate-200">{aiSuggestion.hypothesis}</p>
             </div>
             <div className="pt-2 border-t border-purple-500/20">
-              <span className="text-[9px] text-purple-400/70 font-bold uppercase tracking-widest mb-1 block">Reasoning</span>
-              <p className="text-[11px] text-slate-400 italic leading-relaxed">{aiSuggestion.reasoning}</p>
+              <span className="text-[10px] text-purple-400/70 font-bold uppercase tracking-widest mb-1 block">Reasoning</span>
+              <p className="text-xs text-slate-400 italic leading-relaxed">{aiSuggestion.reasoning}</p>
             </div>
             <button 
               onClick={onAdoptHypothesis}

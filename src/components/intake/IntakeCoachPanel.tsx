@@ -1,5 +1,6 @@
 import React from 'react';
 import { Brain, RefreshCw, CheckCircle2, AlertCircle, HelpCircle } from 'lucide-react';
+import { motion } from 'motion/react';
 import { ShimmerButton, CyclingLoadingText } from '../MicroInteractions';
 import { UserClue, IntakeFeedback } from '../../types';
 
@@ -75,8 +76,8 @@ export const IntakeCoachPanel: React.FC<IntakeCoachPanelProps> = ({
                   </span>
                 </div>
                 <div className="min-w-0 flex-1">
-                  <span className="text-[9px] uppercase font-mono text-slate-500 font-bold block">Comprehension</span>
-                  <p className="text-[10px] text-slate-400 mt-0.5 leading-normal">
+                  <span className="text-[10px] uppercase font-mono text-slate-500 font-bold block">Comprehension</span>
+                  <p className="text-xs text-slate-400 mt-0.5 leading-normal">
                     {intakeFeedback.summary}
                   </p>
                 </div>
@@ -85,11 +86,11 @@ export const IntakeCoachPanel: React.FC<IntakeCoachPanelProps> = ({
               {/* Correct Clues */}
               {intakeFeedback.correctClues.length > 0 && (
                 <div className="space-y-1.5">
-                  <span className="text-[9px] uppercase font-bold text-green-400 tracking-wider flex items-center gap-1.5">
+                  <span className="text-[10px] uppercase font-bold text-green-400 tracking-wider flex items-center gap-1.5">
                     <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
                     Key Clues Found
                   </span>
-                  <ul className="text-[10px] space-y-1 pl-4 list-disc text-slate-300">
+                  <ul className="text-xs space-y-1 pl-4 list-disc text-slate-300">
                     {intakeFeedback.correctClues.map((item, i) => (
                       <li key={i} className="leading-relaxed">{item}</li>
                     ))}
@@ -100,11 +101,11 @@ export const IntakeCoachPanel: React.FC<IntakeCoachPanelProps> = ({
               {/* Missing Clues */}
               {intakeFeedback.missingClues.length > 0 && (
                 <div className="space-y-1.5">
-                  <span className="text-[9px] uppercase font-bold text-amber-500 tracking-wider flex items-center gap-1.5">
+                  <span className="text-[10px] uppercase font-bold text-amber-500 tracking-wider flex items-center gap-1.5">
                     <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                     Missing details
                   </span>
-                  <ul className="text-[10px] space-y-1 pl-4 list-disc text-slate-300">
+                  <ul className="text-xs space-y-1 pl-4 list-disc text-slate-300">
                     {intakeFeedback.missingClues.map((item, i) => (
                       <li key={i} className="leading-relaxed">{item}</li>
                     ))}
@@ -115,8 +116,8 @@ export const IntakeCoachPanel: React.FC<IntakeCoachPanelProps> = ({
           ) : (
             <div className="h-full flex flex-col items-center justify-center text-slate-650 text-center py-12 px-4 gap-2">
               <HelpCircle className="w-8 h-8 opacity-30 text-slate-500" />
-              <p className="text-[10px] uppercase tracking-wider font-extrabold text-slate-400">Run Highlight Audit</p>
-              <p className="text-[10px] text-slate-500 max-w-[200px] leading-normal">
+              <p className="text-xs uppercase tracking-wider font-extrabold text-slate-400">Run Highlight Audit</p>
+              <p className="text-xs text-slate-500 max-w-[200px] leading-normal">
                 Highlight objective, constraint, stakeholder, and metric details inside the brief, then click audit below.
               </p>
             </div>
@@ -128,15 +129,17 @@ export const IntakeCoachPanel: React.FC<IntakeCoachPanelProps> = ({
             onClick={onAudit}
             disabled={isAuditing || isAnalyzing || !(userClues && userClues.length > 0) || !!intakeFeedback}
             isLoading={isAuditing}
-            className="w-full py-2 bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-800 disabled:text-slate-500 disabled:border-slate-850 text-white rounded-md text-[10px] font-bold uppercase tracking-wider border border-cyan-500/30 transition-colors shadow-[0_0_15px_rgba(8,145,178,0.15)] cursor-pointer"
+            className="w-full py-2 bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-800 disabled:text-slate-500 disabled:border-slate-850 text-white rounded-md text-xs font-bold uppercase tracking-wider border border-cyan-500/30 transition-colors shadow-[0_0_15px_rgba(8,145,178,0.15)] cursor-pointer"
           >
             {isAuditing ? 'Auditing Highlights...' : 'Audit Highlights'}
           </ShimmerButton>
 
-          <button
+          <motion.button
             onClick={onAnalyze}
             disabled={isAnalyzing || isUploading || isAuditing || (!caseGlance && !intakeFeedback && (tokens ?? 0) < 10)}
-            className={`w-full py-2 rounded-md text-[9px] font-bold uppercase tracking-wider transition-colors cursor-pointer border ${
+            whileHover={isAnalyzing || isUploading || isAuditing || (!caseGlance && !intakeFeedback && (tokens ?? 0) < 10) ? {} : { scale: 1.015 }}
+            whileTap={isAnalyzing || isUploading || isAuditing || (!caseGlance && !intakeFeedback && (tokens ?? 0) < 10) ? {} : { scale: 0.985 }}
+            className={`w-full py-2 rounded-md text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer border focus-visible:ring-2 focus-visible:ring-cyan-500/50 focus-visible:outline-none focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${
               !!intakeFeedback && !caseGlance
                 ? "bg-cyan-600 hover:bg-cyan-500 border-cyan-500/30 text-white shadow-[0_0_15px_rgba(8,145,178,0.15)]"
                 : "bg-slate-800 hover:bg-slate-700 disabled:bg-slate-900 border-slate-700 disabled:border-slate-800 text-slate-300 disabled:text-slate-650 hover:text-white"
@@ -148,8 +151,8 @@ export const IntakeCoachPanel: React.FC<IntakeCoachPanelProps> = ({
               ? 'Re-run AI Extraction' 
               : intakeFeedback 
               ? 'Generate Case at a Glance (Free)' 
-              : 'Bypass & Auto-Analyze (Costs 10 🪙)'}
-          </button>
+              : 'Bypass & Auto-Analyze (Costs 10 ⚡)'}
+          </motion.button>
         </div>
       </div>
     </div>

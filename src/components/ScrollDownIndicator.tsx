@@ -61,7 +61,7 @@ export const ScrollDownIndicator: React.FC = () => {
           exit={{ opacity: 0, y: 10 }}
           className="fixed bottom-28 md:bottom-24 lg:bottom-12 left-1/2 -translate-x-1/2 z-[100] pointer-events-none flex flex-col items-center gap-1.5"
         >
-          <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-[#00d4ff]/80 px-4 py-1.5 bg-[#090b10]/90 backdrop-blur-md rounded-full border border-[#00d4ff]/30 shadow-[0_4px_20px_rgba(0,212,255,0.15)] flex items-center gap-2">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-[#00d4ff]/80 px-4 py-1.5 bg-[#090b10]/90 backdrop-blur-md rounded-full border border-[#00d4ff]/30 shadow-[0_4px_20px_rgba(0,212,255,0.15)] flex items-center gap-2">
             Scroll for more
             <motion.div
               animate={{ y: [0, 4, 0] }}

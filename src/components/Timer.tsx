@@ -1,15 +1,18 @@
 import { useState, useEffect } from 'react';
-import { Play, Pause, RotateCcw } from 'lucide-react';
+import { Play, Pause, RotateCcw, Volume2, VolumeX, Zap, BookOpen } from 'lucide-react';
 import { sounds } from '../lib/sounds';
 import { Tooltip } from './MicroInteractions';
 import { useAppContext } from '../context/AppContext';
 
 type Props = {
+  activeSection: string;
   onExport: () => Promise<void>;
   onReset: () => void;
+  showCaseBriefDrawer: boolean;
+  onToggleCaseBrief: () => void;
 };
 
-export const Timer = ({ onExport, onReset }: Props) => {
+export const Timer = ({ activeSection, onExport, onReset, showCaseBriefDrawer, onToggleCaseBrief }: Props) => {
   const { appState } = useAppContext();
   const [duration, setDuration] = useState<number>(30 * 60); // setup 30 mins default
   const [timeLeft, setTimeLeft] = useState<number>(30 * 60);
@@ -17,6 +20,52 @@ export const Timer = ({ onExport, onReset }: Props) => {
   const [isExported, setIsExported] = useState<boolean>(false);
 
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [soundsEnabled, setSoundsEnabled] = useState(() => {
+    return localStorage.getItem('caseedge_sounds_enabled') !== 'false';
+  });
+  const [floatingIndicators, setFloatingIndicators] = useState<{ id: number; text: string; className: string }[]>([]);
+  const [prevTokens, setPrevTokens] = useState<number | null>(null);
+
+  const toggleSounds = () => {
+    const nextVal = sounds.toggle();
+    setSoundsEnabled(nextVal);
+    if (nextVal) {
+      setTimeout(() => sounds.playClick(), 50);
+    }
+  };
+
+  useEffect(() => {
+    if (prevTokens === null) {
+      setPrevTokens(appState.tokens ?? 50);
+      return;
+    }
+    const current = appState.tokens ?? 50;
+    const diff = current - prevTokens;
+    if (diff !== 0) {
+      setPrevTokens(current);
+      const text = diff > 0 ? `+${diff} ⚡` : `${diff} ⚡`;
+      const className = diff > 0 
+        ? 'text-green-400 font-extrabold drop-shadow-[0_0_8px_rgba(74,222,128,0.5)]'
+        : 'text-red-400 font-extrabold drop-shadow-[0_0_8px_rgba(248,113,113,0.5)]';
+      
+      const id = Date.now();
+      setFloatingIndicators(prev => [...prev, { id, text, className }]);
+      
+      // Play coin sounds only if audio is enabled
+      if (sounds.enabled) {
+        if (diff > 0) {
+          sounds.playAdd();
+        } else {
+          sounds.playRemove();
+        }
+      }
+
+      // Remove indicator after 1.2s (matches CSS keyframe transition duration)
+      setTimeout(() => {
+        setFloatingIndicators(prev => prev.filter(ind => ind.id !== id));
+      }, 1200);
+    }
+  }, [appState.tokens, prevTokens]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -67,6 +116,38 @@ export const Timer = ({ onExport, onReset }: Props) => {
   if (percentage <= 0.2) colorClass = 'text-red-500';
   else if (percentage <= 0.5) colorClass = 'text-amber-500';
 
+  // Pacing Calculation
+  let pacingLabel = 'On Track';
+  let pacingColorClass = 'text-green-400 bg-green-950/20 border-green-500/20';
+
+  const elapsed = duration - timeLeft;
+  if (activeSection === 'intake') {
+    if (elapsed > 5 * 60) {
+      pacingLabel = 'Overtime (+5m)';
+      pacingColorClass = 'text-amber-500 bg-amber-950/20 border-amber-500/20';
+    }
+  } else if (activeSection === 'issueTree' || activeSection === 'frameworks') {
+    if (elapsed > 15 * 60) {
+      pacingLabel = 'Overtime (+15m)';
+      pacingColorClass = 'text-amber-500 bg-amber-950/20 border-amber-500/20';
+    }
+  } else if (activeSection === 'drafter' || activeSection === 'assumptions') {
+    if (elapsed > 22 * 60) {
+      pacingLabel = 'Overtime (+22m)';
+      pacingColorClass = 'text-amber-500 bg-amber-950/20 border-amber-500/20';
+    }
+  } else if (activeSection === 'slideOutline' || activeSection === 'qa') {
+    if (elapsed > 30 * 60) {
+      pacingLabel = 'Overtime (+30m)';
+      pacingColorClass = 'text-red-400 bg-red-950/20 border-red-500/20 animate-pulse';
+    }
+  }
+
+  if (timeLeft === 0) {
+    pacingLabel = 'Time Out';
+    pacingColorClass = 'text-red-400 bg-red-950/20 border-red-500/20 animate-pulse';
+  }
+
   return (
     <header className="h-14 sm:h-16 border-b border-slate-800 bg-[#0f172a] flex items-center justify-between px-3 sm:px-6 shrink-0 relative z-20">
       <div className="flex items-center gap-2 sm:gap-3 shrink-0">
@@ -99,21 +180,32 @@ export const Timer = ({ onExport, onReset }: Props) => {
       </div>
       
       <div className="flex items-center gap-1.5 sm:gap-6 min-w-0">
-        <div className="flex flex-col items-end border-l border-slate-800 pl-4 sm:pl-6 shrink-0">
+        <div className="flex flex-col items-end border-l border-slate-800 pl-4 sm:pl-6 shrink-0 relative">
           <span className="text-[10px] uppercase text-slate-500 font-bold tracking-widest hidden sm:block">AI Balance</span>
-          <div className="flex items-center gap-1.5 sm:gap-2 sm:-mt-1 h-6">
-            <span className="text-xs sm:text-sm font-extrabold text-cyan-400 select-none">
-              🪙 {appState.tokens ?? 0}
+          <div className="flex items-center gap-1.5 sm:gap-2 sm:-mt-1 h-6 relative">
+            <span className="text-xs sm:text-sm font-extrabold text-cyan-400 select-none flex items-center gap-1">
+              <Zap className="w-3.5 h-3.5 text-cyan-400 fill-cyan-400/20 shrink-0 animate-[pulse_3s_ease-in-out_infinite]" /> {appState.tokens ?? 0}
             </span>
+            {floatingIndicators.map(ind => (
+              <span 
+                key={ind.id} 
+                className={`absolute right-0 -top-6 text-[10px] font-mono animate-float-up pointer-events-none select-none ${ind.className}`}
+              >
+                {ind.text}
+              </span>
+            ))}
           </div>
         </div>
 
         <div className="flex flex-col items-end border-r-0 border-l-0 sm:border-l border-slate-800 sm:pl-6 sm:border-r pr-2 sm:pr-6 shrink-0">
-          <span className="text-[10px] uppercase text-slate-500 font-bold tracking-widest hidden sm:block">Remaining Time</span>
+          <span className="text-[10px] uppercase text-slate-500 font-bold tracking-widest hidden sm:block">
+            Remaining Time <span className={`ml-2 text-[10px] px-1.5 py-0.5 rounded font-extrabold uppercase tracking-wide border ${pacingColorClass}`}>{pacingLabel}</span>
+          </span>
           <div className="flex items-center gap-1.5 sm:gap-2 sm:-mt-1">
             <span className={`text-xl sm:text-2xl font-mono font-bold ${colorClass}`}>
               {formatTime(timeLeft)}
             </span>
+            <span className={`text-[10px] sm:hidden px-1 py-0.5 rounded font-extrabold uppercase border ${pacingColorClass}`}>{pacingLabel}</span>
             <div className="flex gap-1">
               <Tooltip content={isRunning ? 'Pause Timer' : 'Start Timer'} position="bottom">
                 <button onClick={toggleTimer} className="w-6 h-6 bg-slate-800 flex items-center justify-center rounded hover:bg-slate-700 text-slate-300">
@@ -125,11 +217,34 @@ export const Timer = ({ onExport, onReset }: Props) => {
                   <RotateCcw className="w-3 h-3" />
                 </button>
               </Tooltip>
+              <Tooltip content={soundsEnabled ? 'Mute Sounds' : 'Unmute Sounds'} position="bottom">
+                <button onClick={toggleSounds} className="w-6 h-6 bg-slate-800 flex items-center justify-center rounded hover:bg-slate-700 text-slate-300">
+                  {soundsEnabled ? <Volume2 className="w-3 h-3" /> : <VolumeX className="w-3 h-3 text-red-450" />}
+                </button>
+              </Tooltip>
             </div>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
+          {!!appState.caseBrief && (
+            <Tooltip content={showCaseBriefDrawer ? 'Close Case Brief' : 'Read Case Brief'} position="bottom">
+              <button
+                onClick={() => {
+                  sounds.playClick();
+                  onToggleCaseBrief();
+                }}
+                className={`px-2.5 sm:px-4 py-1.5 sm:py-2 rounded font-medium text-xs sm:text-sm transition-colors flex items-center gap-1.5 cursor-pointer ${
+                  showCaseBriefDrawer 
+                    ? 'bg-cyan-600 hover:bg-cyan-500 text-white' 
+                    : 'bg-slate-800 hover:bg-slate-700 text-slate-350 hover:text-slate-200'
+                }`}
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+                <span className="hidden md:inline">{showCaseBriefDrawer ? 'Hide Case' : 'Read Case'}</span>
+              </button>
+            </Tooltip>
+          )}
           {showResetConfirm ? (
             <div className="flex items-center gap-1.5 sm:gap-2">
               <button 

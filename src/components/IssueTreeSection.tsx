@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
+import { Maximize2, Minimize2 } from 'lucide-react';
 import { buildIssueTree, evaluateIssueTree } from '../services/geminiService';
 import { AppState, IssueTreeNode, NodeFeedbackItem } from '../types';
 import { EmptyState } from './EmptyState';
@@ -18,6 +19,7 @@ export const IssueTreeSection: React.FC<{ onNext?: () => void; onGoBack?: () => 
   const { appState, setAppState } = useAppContext();
   const [isBuilding, setIsBuilding] = useState(false);
   const [isAuditing, setIsAuditing] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
     if (appState.caseGlance?.coreProblem && !appState.playgroundTree) {
@@ -138,9 +140,52 @@ export const IssueTreeSection: React.FC<{ onNext?: () => void; onGoBack?: () => 
       setAppState(prev => ({
         ...prev,
         playgroundTree: addNode(prev.playgroundTree!),
+        focusedNodeId: newChild.id,
         meceFeedback: null
       }));
       toast.success("Sub-issue added!");
+    }
+  };
+
+  const handleAddSibling = (siblingId: string) => {
+    sounds.playClick();
+    if (siblingId === 'root') {
+      toast.error("Cannot add sibling to the root node!");
+      return;
+    }
+    const newSibling: IssueTreeNode = {
+      id: generateUniqueId(),
+      label: 'New Sibling',
+      children: []
+    };
+
+    const addSiblingToParent = (node: IssueTreeNode): IssueTreeNode => {
+      if (node.children) {
+        const index = node.children.findIndex(child => child.id === siblingId);
+        if (index !== -1) {
+          const newChildren = [...node.children];
+          newChildren.splice(index + 1, 0, newSibling);
+          return {
+            ...node,
+            children: newChildren
+          };
+        }
+        return {
+          ...node,
+          children: node.children.map(addSiblingToParent)
+        };
+      }
+      return node;
+    };
+
+    if (appState.playgroundTree) {
+      setAppState(prev => ({
+        ...prev,
+        playgroundTree: addSiblingToParent(prev.playgroundTree!),
+        focusedNodeId: newSibling.id,
+        meceFeedback: null
+      }));
+      toast.success("Sibling issue added!");
     }
   };
 
@@ -162,10 +207,35 @@ export const IssueTreeSection: React.FC<{ onNext?: () => void; onGoBack?: () => 
     };
 
     if (appState.playgroundTree) {
+      let targetFocusId: string | null = null;
+      
+      const findFocusTarget = (node: IssueTreeNode, parentId: string | null = null): boolean => {
+        if (node.children) {
+          const idx = node.children.findIndex(c => c.id === nodeId);
+          if (idx !== -1) {
+            if (idx > 0) {
+              targetFocusId = node.children[idx - 1].id;
+            } else if (idx < node.children.length - 1) {
+              targetFocusId = node.children[idx + 1].id;
+            } else {
+              targetFocusId = parentId || node.id;
+            }
+            return true;
+          }
+          for (const child of node.children) {
+            if (findFocusTarget(child, node.id)) return true;
+          }
+        }
+        return false;
+      };
+
+      findFocusTarget(appState.playgroundTree, null);
+
       const updated = removeNode(appState.playgroundTree);
       setAppState(prev => ({
         ...prev,
         playgroundTree: updated,
+        focusedNodeId: targetFocusId,
         meceFeedback: null
       }));
       toast.info("Sub-issue removed");
@@ -281,7 +351,7 @@ export const IssueTreeSection: React.FC<{ onNext?: () => void; onGoBack?: () => 
                   ? 'Re-build Issue Tree' 
                   : appState.meceFeedback 
                   ? 'Unlock AI Tree (Free)' 
-                  : 'Unlock AI Tree (10 🪙)'}
+                  : 'Unlock AI Tree (10 ⚡)'}
               </ShimmerButton>
             </Tooltip>
           )}
@@ -305,41 +375,81 @@ export const IssueTreeSection: React.FC<{ onNext?: () => void; onGoBack?: () => 
 
       {/* Mode Selector Tabs */}
       {appState.caseGlance && (
-        <div className="flex border-b border-slate-850 bg-[#070b14]/20 px-6 py-2.5 shrink-0 gap-4">
-          <button
-            onClick={() => {
-              sounds.playClick();
-              const newState: Partial<AppState> = { issueTreeMode: 'playground' };
-              if (!appState.playgroundTree) {
-                newState.playgroundTree = {
-                  id: 'root',
-                  label: appState.caseGlance?.coreProblem || 'Core Problem',
-                  children: []
-                };
-              }
-              setAppState(prev => ({ ...prev, ...newState }));
-            }}
-            className={`text-[10px] uppercase font-bold tracking-wider py-1.5 px-3 rounded-md transition-all cursor-pointer border ${
-              isPlayground
-                ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30 font-extrabold'
-                : 'text-slate-500 hover:text-slate-400 border-transparent'
-            }`}
-          >
-            Interactive Playground
-          </button>
-          <button
-            onClick={() => {
-              sounds.playClick();
-              setAppState(prev => ({ ...prev, issueTreeMode: 'generate' }));
-            }}
-            className={`text-[10px] uppercase font-bold tracking-wider py-1.5 px-3 rounded-md transition-all cursor-pointer border flex items-center gap-1.5 ${
-              !isPlayground
-                ? 'bg-blue-500/10 text-blue-400 border-blue-500/30 font-extrabold'
-                : 'text-slate-500 hover:text-slate-400 border-transparent'
-            }`}
-          >
-            {appState.issueTree ? '✨' : '🔒'} AI Generated Tree
-          </button>
+        <div className="flex justify-between items-center border-b border-slate-850 bg-[#070b14]/20 px-6 py-2.5 shrink-0 gap-4">
+          <div className="flex gap-4">
+            <button
+              onClick={() => {
+                sounds.playClick();
+                const newState: Partial<AppState> = { issueTreeMode: 'playground' };
+                if (!appState.playgroundTree) {
+                  newState.playgroundTree = {
+                    id: 'root',
+                    label: appState.caseGlance?.coreProblem || 'Core Problem',
+                    children: []
+                  };
+                }
+                setAppState(prev => ({ ...prev, ...newState }));
+              }}
+              className={`text-[10px] uppercase font-bold tracking-wider py-1.5 px-3 rounded-md transition-all cursor-pointer border ${
+                isPlayground
+                  ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30 ' + (isExpanded ? 'border-cyan-500/50' : '') + ' font-extrabold'
+                  : 'text-slate-500 hover:text-slate-400 border-transparent'
+              }`}
+            >
+              Interactive Playground
+            </button>
+            <button
+              onClick={() => {
+                sounds.playClick();
+                setAppState(prev => ({ ...prev, issueTreeMode: 'generate' }));
+              }}
+              className={`text-[10px] uppercase font-bold tracking-wider py-1.5 px-3 rounded-md transition-all cursor-pointer border flex items-center gap-1.5 ${
+                !isPlayground
+                  ? 'bg-blue-500/10 text-blue-400 border-blue-500/30 font-extrabold'
+                  : 'text-slate-500 hover:text-slate-400 border-transparent'
+              }`}
+            >
+              {appState.issueTree ? '✨' : '🔒'} AI Generated Tree
+            </button>
+          </div>
+
+          {isPlayground && (
+            <div className="flex items-center gap-3">
+              {appState.meceFeedback && (
+                <span className={`text-[10px] font-bold px-2 py-1 rounded border hidden sm:inline-block ${
+                  appState.meceFeedback.score >= 80 
+                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' 
+                    : 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                }`}>
+                  MECE Score: {appState.meceFeedback.score}/100
+                </span>
+              )}
+              {isExpanded && (
+                <button
+                  onClick={handleAudit}
+                  disabled={isAuditing}
+                  className="bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-700 text-[10px] uppercase font-bold text-white px-3 py-1.5 rounded transition-all cursor-pointer flex items-center gap-1.5 shadow-[0_0_10px_rgba(6,182,212,0.15)] hover:shadow-[0_0_15px_rgba(6,182,212,0.3)]"
+                >
+                  {isAuditing ? 'Auditing...' : 'Run MECE Audit'}
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  sounds.playClick();
+                  setIsExpanded(!isExpanded);
+                }}
+                className={`text-[10px] uppercase font-bold tracking-wider py-1.5 px-3 rounded-md transition-all cursor-pointer border flex items-center gap-1.5 ${
+                  isExpanded
+                    ? 'bg-cyan-500/15 text-cyan-400 border-cyan-500/40 shadow-[0_0_12px_rgba(6,182,212,0.1)]'
+                    : 'text-slate-450 hover:text-slate-300 border-slate-800 bg-slate-900/30'
+                }`}
+                title={isExpanded ? "Show split view with Coach" : "Maximize issue tree playground"}
+              >
+                {isExpanded ? <Minimize2 className="w-3 h-3" /> : <Maximize2 className="w-3 h-3" />}
+                <span>{isExpanded ? 'Split View' : 'Focus Mode'}</span>
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -357,11 +467,12 @@ export const IssueTreeSection: React.FC<{ onNext?: () => void; onGoBack?: () => 
                 onAddChild={handleAddChild}
                 onDeleteNode={handleDeleteNode}
                 nodeFeedbackMap={nodeFeedbackMap}
+                onAddSibling={handleAddSibling}
               />
             </div>
 
             {/* Coach Audit Column (Playground Mode Only) */}
-            {isPlayground && (
+            {isPlayground && !isExpanded && (
               <MECECoachPanel
                 isAuditing={isAuditing}
                 meceFeedback={appState.meceFeedback}
@@ -390,38 +501,37 @@ export const IssueTreeSection: React.FC<{ onNext?: () => void; onGoBack?: () => 
 
         {activeTree && onNext && (
           <div className="flex justify-end pt-4 border-t border-slate-800 mt-6 shrink-0">
-            <Tooltip content="Proceed to select analysis frameworks" position="top" className="inline-flex">
-              <button 
-                onClick={() => {
-                  sounds.playTransition();
-                  if (onNext) onNext();
-                }}
-                className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-2 cursor-pointer"
-              >
-                Select Frameworks
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-              </button>
-            </Tooltip>
+            {(() => {
+              const isTreeCompleted = !!appState.issueTree || !!appState.meceFeedback;
+              return (
+                <Tooltip 
+                  content={isTreeCompleted ? "Proceed to select analysis frameworks" : "Generate an AI Tree or Run MECE Audit on your playground tree to unlock"} 
+                  position="top" 
+                  className="inline-flex"
+                >
+                  <button 
+                    disabled={!isTreeCompleted}
+                    onClick={() => {
+                      if (isTreeCompleted) {
+                        sounds.playTransition();
+                        if (onNext) onNext();
+                      }
+                    }}
+                    className={`text-xs font-bold uppercase tracking-widest transition-all flex items-center gap-2 px-4 py-2 rounded ${
+                      isTreeCompleted
+                        ? 'bg-blue-600 hover:bg-blue-500 text-white cursor-pointer'
+                        : 'bg-slate-800 text-slate-500 border border-slate-700/50 cursor-not-allowed'
+                    }`}
+                  >
+                    Select Frameworks
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                  </button>
+                </Tooltip>
+              );
+            })()}
           </div>
         )}
       </div>
-
-      <style dangerouslySetInnerHTML={{ __html: `
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
-          height: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #1e293b;
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: #334155;
-        }
-      `}} />
     </section>
   );
 };

@@ -3,6 +3,7 @@ import { ChevronDown, ChevronRight, AlertTriangle, Plus, Trash2 } from 'lucide-r
 import { EditableField, Tooltip } from '../MicroInteractions';
 import { sounds } from '../../lib/sounds';
 import { IssueTreeNode, NodeFeedbackItem } from '../../types';
+import { useAppContext } from '../../context/AppContext';
 
 type TreeNodeProps = {
   node: IssueTreeNode;
@@ -12,6 +13,7 @@ type TreeNodeProps = {
   onAddChild?: (parentId: string) => void;
   onDeleteNode?: (nodeId: string) => void;
   nodeFeedbackMap?: { [nodeId: string]: NodeFeedbackItem };
+  onAddSibling?: (siblingId: string) => void;
 };
 
 export const TreeNode: React.FC<TreeNodeProps> = ({ 
@@ -21,20 +23,33 @@ export const TreeNode: React.FC<TreeNodeProps> = ({
   isPlayground, 
   onAddChild, 
   onDeleteNode, 
-  nodeFeedbackMap 
+  nodeFeedbackMap,
+  onAddSibling
 }) => {
   const [expanded, setExpanded] = useState(true);
+  const { appState, setAppState } = useAppContext();
   const hasChildren = node.children && node.children.length > 0;
   const feedback = nodeFeedbackMap?.[node.id];
+  const isFocused = appState.focusedNodeId === node.id;
+
+  // Determine container classes and layout wrapper based on level
+  let rowClasses = "flex items-center transition-all w-full group relative";
+  
+  if (level === 0) {
+    rowClasses += " p-4 rounded-xl bg-gradient-to-r from-cyan-950/20 to-slate-900/90 border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.06)] hover:border-cyan-500/50 hover:shadow-[0_0_20px_rgba(6,182,212,0.12)] mb-4";
+  } else if (level === 1) {
+    rowClasses += " p-3 rounded-lg bg-slate-900/50 border border-slate-800 hover:bg-slate-900/80 hover:border-slate-700/60 shadow-sm mb-3";
+  } else {
+    rowClasses += " p-2 rounded-md hover:bg-slate-800/20";
+  }
+
+  const shouldRenderChildrenBlock = expanded && (hasChildren || isPlayground);
 
   return (
     <div className="w-full">
-      <div 
-        className="flex items-center p-2 rounded-md transition-colors w-full group relative hover:bg-slate-800/20"
-        style={{ paddingLeft: `${level * 1.5 + 0.5}rem` }}
-      >
+      <div className={rowClasses}>
         <div 
-          className="w-6 flex justify-center mr-1 cursor-pointer"
+          className="w-6 flex justify-center mr-1 cursor-pointer shrink-0"
           onClick={() => {
             if (hasChildren) {
               sounds.playHover();
@@ -56,8 +71,36 @@ export const TreeNode: React.FC<TreeNodeProps> = ({
           <EditableField 
             value={node.label} 
             onChange={(val) => onUpdateText(node.id, val)}
-            className="w-auto inline-block m-0 p-1 bg-transparent hover:bg-slate-800/30"
-            textClassName={`text-sm ${level === 0 ? 'font-bold text-blue-400' : level === 1 ? 'font-semibold text-slate-200' : 'text-slate-400'}`}
+            className="w-full inline-block m-0 p-1 bg-transparent hover:bg-slate-800/30"
+            textClassName={`text-sm ${
+              level === 0 
+                ? 'font-bold text-cyan-400' 
+                : level === 1 
+                ? 'font-semibold text-slate-200' 
+                : 'text-slate-350 text-slate-300'
+            }`}
+            autoFocus={isFocused}
+            onFocusedReset={() => {
+              setAppState(prev => ({
+                ...prev,
+                focusedNodeId: null
+              }));
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                if (level === 0) {
+                  if (onAddChild) onAddChild(node.id);
+                } else {
+                  if (onAddSibling) onAddSibling(node.id);
+                }
+              } else if (e.key === 'Backspace' && e.currentTarget.value.trim() === '') {
+                e.preventDefault();
+                if (onDeleteNode && level > 0) {
+                  onDeleteNode(node.id);
+                }
+              }
+            }}
           />
           
           {feedback && (
@@ -101,13 +144,12 @@ export const TreeNode: React.FC<TreeNodeProps> = ({
         )}
       </div>
       
-      {expanded && hasChildren && (
-        <div className="flex flex-col relative w-full">
+      {shouldRenderChildrenBlock && (
+        <div className="flex flex-col relative w-full pl-[22px]">
           <div 
-            className="absolute left-0 top-0 bottom-0 w-px bg-slate-800/80"
-            style={{ left: `${level * 1.5 + 1.25}rem` }}
+            className="absolute left-[8px] top-0 bottom-0 w-px bg-slate-800/80"
           />
-          {node.children!.map((child) => (
+          {hasChildren && node.children!.map((child) => (
             <TreeNode 
               key={child.id} 
               node={child} 
@@ -117,8 +159,18 @@ export const TreeNode: React.FC<TreeNodeProps> = ({
               onAddChild={onAddChild}
               onDeleteNode={onDeleteNode}
               nodeFeedbackMap={nodeFeedbackMap}
+              onAddSibling={onAddSibling}
             />
           ))}
+          {isPlayground && onAddChild && (
+            <button
+              onClick={() => onAddChild(node.id)}
+              className="flex items-center gap-1.5 py-1.5 px-3 ml-[6px] mt-1 mb-3 rounded-lg border border-dashed border-slate-800 hover:border-cyan-500/40 text-slate-500 hover:text-cyan-400 text-xs font-medium transition-all cursor-pointer bg-slate-950/20 hover:bg-cyan-950/10 self-start"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add sub-issue</span>
+            </button>
+          )}
         </div>
       )}
     </div>

@@ -37,7 +37,7 @@ export const AITreeLockedView: React.FC<AITreeLockedViewProps> = ({
             ? 'Generating...' 
             : hasMeceFeedback 
             ? 'Unlock AI Tree (Free)' 
-            : 'Bypass & Unlock (Costs 10 🪙)'}
+            : 'Bypass & Unlock (Costs 10 ⚡)'}
         </ShimmerButton>
       </Tooltip>
     </div>
