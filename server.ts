@@ -239,7 +239,7 @@ async function generateHypothesis(caseBrief: string, coreProblem?: string) {
 async function buildIssueTree(coreProblem: string) {
   return await safeGenAI(
     [
-      { text: "You are a McKinsey consultant. Break down this core problem into a mutually exclusive and collectively exhaustive (MECE) issue tree. Provide a succinct 2 to 3-level deep logic tree (maximum 12-15 nodes total) to ensure fast processing. Keep the labels concise, maximum 10 words each. Do not output overly long labels or exhaustive lists in the labels. Respond strictly in English. Respond in JSON." },
+      { text: "You are a McKinsey consultant. Break down this core problem into a mutually exclusive and collectively exhaustive (MECE) issue tree. Provide a structured 3-level tree (Root, level-1 sub-issues, and level-2 sub-issues) with a maximum of 12-15 nodes total. Each node must have a unique alphanumeric id (e.g., 'node_1', 'node_2', etc.) and no two nodes in the entire tree should share the same id. Keep the labels concise, maximum 10 words each. Do not output overly long labels or exhaustive lists in the labels. Respond strictly in English. Respond in JSON." },
       { text: `Core Problem: ${coreProblem}` }
     ],
     {

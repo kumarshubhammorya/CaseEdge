@@ -1,4 +1,4 @@
-import { FileText, Grid, CheckCircle, HelpCircle, Network, Users, Zap, Presentation, Database, ShieldCheck, BookOpen, BarChart, ExternalLink, Lock } from 'lucide-react';
+import { FileText, Grid, CheckCircle, HelpCircle, Network, Users, Zap, Presentation, Database, ShieldCheck, BookOpen, BarChart, ExternalLink, Lock, Globe } from 'lucide-react';
 import React from 'react';
 import { motion } from 'motion/react';
 import { toast } from 'sonner';
@@ -20,6 +20,7 @@ export const SECTIONS = [
   { id: 'assumptions', label: 'Assumptions', icon: ShieldCheck },
   { id: 'slideOutline', label: 'Slide Outline', icon: Presentation },
   { id: 'qa', label: 'Judge Q&A', icon: HelpCircle },
+  { id: 'library', label: 'Case Library', icon: Globe },
   { id: 'database', label: 'Cloud Files', icon: Database },
 ];
 
@@ -30,6 +31,7 @@ export const isSectionEnabled = (sectionId: string, appState: AppState): boolean
 
   switch (sectionId) {
     case 'intake':
+    case 'library':
     case 'database':
       return true;
     case 'issueTree':
@@ -61,7 +63,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, setActiveSectio
           const enabled = isSectionEnabled(sec.id, appState);
           return (
             <React.Fragment key={sec.id}>
-              {sec.id === 'database' && <div className="mx-2 my-4 border-t border-slate-800/50" />}
+              {sec.id === 'library' && <div className="mx-2 my-4 border-t border-slate-800/50" />}
               <motion.button
                 onClick={() => {
                   if (enabled) {

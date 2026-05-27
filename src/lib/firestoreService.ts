@@ -121,3 +121,51 @@ export async function deleteCase(id: string) {
     handleFirestoreError(error, OperationType.DELETE, `cases/${id}`);
   }
 }
+
+export async function savePublicCase(
+  title: string,
+  description: string,
+  industry: string,
+  difficulty: string,
+  extractedText: string
+) {
+  if (!auth.currentUser) throw new Error("Not logged in");
+  
+  const caseId = generateUUID();
+  try {
+    await setDoc(doc(db, 'public_cases', caseId), {
+      ownerId: auth.currentUser.uid,
+      ownerName: auth.currentUser.displayName || auth.currentUser.email || 'Anonymous User',
+      title,
+      description,
+      industry,
+      difficulty,
+      extractedText,
+      createdAt: serverTimestamp(),
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, 'public_cases');
+  }
+  return caseId;
+}
+
+export async function getPublicCases() {
+  const q = query(collection(db, 'public_cases'));
+  try {
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, 'public_cases');
+    return [];
+  }
+}
+
+export async function deletePublicCase(id: string) {
+  if (!auth.currentUser) return;
+  try {
+    await deleteDoc(doc(db, 'public_cases', id));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, `public_cases/${id}`);
+  }
+}
+

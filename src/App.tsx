@@ -10,6 +10,7 @@ import { DrafterSection } from './components/DrafterSection';
 import { SlideOutlineSection } from './components/SlideOutlineSection';
 import { QASection } from './components/QASection';
 import { DatabaseSection } from './components/DatabaseSection';
+import { LibrarySection } from './components/LibrarySection';
 import { AssumptionTracker } from './components/AssumptionTracker';
 import { Landing } from './components/Landing';
 import { UserGuide } from './components/UserGuide';
@@ -112,6 +113,7 @@ export default function App() {
           {!showUserGuide && (activeSection !== 'intake' || appState.caseGlance) && <ScrollDownIndicator />}
           <div className="w-full max-w-5xl mx-auto py-2 md:py-4 px-4 md:px-6 lg:px-8 flex-1 flex flex-col min-h-0 pb-[100px] md:pb-8">
             {activeSection === 'intake' && <IntakeSection onNext={() => setActiveSection('issueTree')} />}
+            {activeSection === 'library' && <LibrarySection onImport={() => setActiveSection('intake')} />}
             {activeSection === 'issueTree' && <IssueTreeSection onNext={() => setActiveSection('frameworks')} onGoBack={() => setActiveSection('intake')} />}
             {activeSection === 'frameworks' && <FrameworksSection onNext={() => setActiveSection('drafter')} onGoBack={() => setActiveSection('issueTree')} />}
             {activeSection === 'drafter' && <DrafterSection onNext={() => setActiveSection('slideOutline')} onGoToAssumptions={() => setActiveSection('assumptions')} onGoBack={() => setActiveSection('frameworks')} />}
