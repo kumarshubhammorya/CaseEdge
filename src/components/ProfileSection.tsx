@@ -62,6 +62,15 @@ export const ProfileSection: React.FC = () => {
   const [collegeName, setCollegeName] = useState('');
   const [photoURL, setPhotoURL] = useState('');
 
+  // Editing state
+  const [isEditing, setIsEditing] = useState(false);
+
+  // Backup states for reverting changes on cancel
+  const [savedUsername, setSavedUsername] = useState('');
+  const [savedBio, setSavedBio] = useState('');
+  const [savedDob, setSavedDob] = useState('');
+  const [savedCollegeName, setSavedCollegeName] = useState('');
+
   // Analytics states
   const [analyticsData, setAnalyticsData] = useState<any[]>([]);
   const [loadingAnalytics, setLoadingAnalytics] = useState(false);
@@ -110,6 +119,10 @@ export const ProfileSection: React.FC = () => {
         setDob('');
         setCollegeName('');
         setPhotoURL('');
+        setSavedUsername('');
+        setSavedBio('');
+        setSavedDob('');
+        setSavedCollegeName('');
         return;
       }
 
@@ -117,14 +130,28 @@ export const ProfileSection: React.FC = () => {
       try {
         const profile = await getUserProfile(user.uid);
         if (profile) {
-          setUsername(profile.username || user.displayName || '');
-          setBio(profile.bio || '');
-          setDob(profile.dob || '');
-          setCollegeName(profile.collegeName || '');
-          setPhotoURL(profile.photoURL || user.photoURL || '');
+          const uName = profile.username || user.displayName || '';
+          const uBio = profile.bio || '';
+          const uDob = profile.dob || '';
+          const uCollege = profile.collegeName || '';
+          const uPhoto = profile.photoURL || user.photoURL || '';
+
+          setUsername(uName);
+          setBio(uBio);
+          setDob(uDob);
+          setCollegeName(uCollege);
+          setPhotoURL(uPhoto);
+
+          setSavedUsername(uName);
+          setSavedBio(uBio);
+          setSavedDob(uDob);
+          setSavedCollegeName(uCollege);
         } else {
-          setUsername(user.displayName || '');
-          setPhotoURL(user.photoURL || '');
+          const dName = user.displayName || '';
+          const dPhoto = user.photoURL || '';
+          setUsername(dName);
+          setPhotoURL(dPhoto);
+          setSavedUsername(dName);
         }
       } catch (err: any) {
         console.error("Error loading profile:", err);
@@ -236,6 +263,15 @@ export const ProfileSection: React.FC = () => {
     reader.readAsDataURL(file);
   };
 
+  const handleCancelEdit = () => {
+    sounds.playClick();
+    setUsername(savedUsername);
+    setBio(savedBio);
+    setDob(savedDob);
+    setCollegeName(savedCollegeName);
+    setIsEditing(false);
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || user.isAnonymous) {
@@ -266,6 +302,12 @@ export const ProfileSection: React.FC = () => {
         collegeName: collegeName.trim(),
         photoURL: photoURL
       });
+
+      setSavedUsername(username.trim());
+      setSavedBio(bio.trim());
+      setSavedDob(dob);
+      setSavedCollegeName(collegeName.trim());
+      setIsEditing(false);
 
       toast.success("Profile saved successfully!");
       sounds.playTransition();
@@ -460,6 +502,67 @@ export const ProfileSection: React.FC = () => {
                 <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
                 <span className="text-sm font-medium">Loading profile details...</span>
               </div>
+            ) : !isEditing ? (
+              <div className="space-y-6">
+                <div className="flex justify-between items-center pb-2 border-b border-slate-800/60">
+                  <span className="text-xs uppercase font-bold text-slate-500 tracking-wider">Current Info</span>
+                  <button
+                    onClick={() => {
+                      sounds.playClick();
+                      setIsEditing(true);
+                    }}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 text-xs font-bold border border-blue-500/20 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                  >
+                    Edit Profile
+                  </button>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Username Display */}
+                  <div className="bg-slate-950/40 border border-slate-850 rounded-xl p-4 space-y-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-550 block">User Name</span>
+                    <div className="flex items-center gap-2 text-sm text-white font-semibold">
+                      <User className="w-4 h-4 text-blue-400" />
+                      <span>{savedUsername || 'Not set'}</span>
+                    </div>
+                  </div>
+
+                  {/* College Display */}
+                  <div className="bg-slate-950/40 border border-slate-850 rounded-xl p-4 space-y-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-550 block">College / University</span>
+                    <div className="flex items-center gap-2 text-sm text-white font-semibold">
+                      <GraduationCap className="w-4 h-4 text-emerald-400" />
+                      <span>{savedCollegeName || <span className="text-slate-600 italic font-normal">Not specified</span>}</span>
+                    </div>
+                  </div>
+
+                  {/* Date of Birth Display */}
+                  <div className="bg-slate-950/40 border border-slate-850 rounded-xl p-4 space-y-1 md:col-span-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-550 block">Date of Birth</span>
+                    <div className="flex items-center gap-2 text-sm text-white font-semibold">
+                      <Calendar className="w-4 h-4 text-purple-400" />
+                      <span>
+                        {savedDob ? (
+                          new Date(savedDob).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })
+                        ) : (
+                          <span className="text-slate-600 italic font-normal">Not specified</span>
+                        )}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Bio Display */}
+                  <div className="bg-slate-950/40 border border-slate-850 rounded-xl p-4 space-y-2 md:col-span-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-550 block">Bio</span>
+                    <div className="flex items-start gap-2.5 text-sm text-slate-350 leading-relaxed font-sans">
+                      <FileText className="w-4.5 h-4.5 text-slate-500 shrink-0 mt-0.5" />
+                      <div className="whitespace-pre-wrap">
+                        {savedBio || <span className="text-slate-600 italic">No bio has been written yet. Tell us about your background!</span>}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             ) : (
               <form onSubmit={handleSave} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -541,8 +644,15 @@ export const ProfileSection: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Submit Buttons */}
+                {/* Cancel & Save Buttons */}
                 <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800/50">
+                  <button
+                    type="button"
+                    onClick={handleCancelEdit}
+                    className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
                   <button
                     type="submit"
                     disabled={saving}
