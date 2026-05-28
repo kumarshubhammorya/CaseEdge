@@ -24,7 +24,9 @@ import { exportSessionToPdf } from './lib/exportUtils';
 import { sounds } from './lib/sounds';
 import { DiagnosticsPanel } from './components/DiagnosticsPanel';
 import { Lock, BookOpen } from 'lucide-react';
-import { saveCaseAnalytics } from './lib/firestoreService';
+import { saveCaseAnalytics, updateUserTokens, saveUserProfile, getUserProfile } from './lib/firestoreService';
+import { db } from './lib/firebase';
+import { onSnapshot, doc, getDoc } from 'firebase/firestore';
 
 
 export default function App() {
@@ -79,6 +81,66 @@ export default function App() {
       });
     }
   }, [user, setAppState]);
+
+  // 1. Real-time Firestore user profile tokens listener
+  useEffect(() => {
+    if (!user || user.isAnonymous) return;
+
+    const unsubscribe = onSnapshot(doc(db, 'users', user.uid), (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        if (data.tokens !== undefined) {
+          setAppState(prev => {
+            if (prev.tokens !== data.tokens) {
+              return { ...prev, tokens: data.tokens };
+            }
+            return prev;
+          });
+        }
+      }
+    }, (error) => {
+      console.error("Error listening to user profile changes:", error);
+    });
+
+    return () => unsubscribe();
+  }, [user, setAppState]);
+
+  // 2. Sync local state tokens to Firestore on change
+  useEffect(() => {
+    if (!user || user.isAnonymous || appState.tokens === undefined) return;
+
+    const syncTokensToDb = async () => {
+      try {
+        const docRef = doc(db, 'users', user.uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          if (data.tokens !== appState.tokens) {
+            await updateUserTokens(user.uid, appState.tokens);
+          }
+        } else {
+          // If profile doc doesn't exist, create it with initial tokens
+          await saveUserProfile(user.uid, {
+            username: user.displayName || 'Consultant',
+            bio: '',
+            dob: '',
+            collegeName: '',
+            photoURL: user.photoURL || '',
+            tokens: appState.tokens
+          });
+        }
+      } catch (err) {
+        console.error("Error syncing tokens to Firestore:", err);
+      }
+    };
+
+    // Debounce database sync slightly to prevent double-writes on rapid updates
+    const timer = setTimeout(() => {
+      syncTokensToDb();
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [appState.tokens, user]);
 
   const handleExport = async () => {
     try {

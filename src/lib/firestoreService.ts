@@ -185,7 +185,7 @@ export async function getUserProfile(userId: string) {
 
 export async function saveUserProfile(
   userId: string,
-  data: { username: string; bio: string; dob: string; collegeName: string }
+  data: { username: string; bio: string; dob: string; collegeName: string; photoURL?: string; tokens?: number }
 ) {
   try {
     await setDoc(doc(db, 'users', userId), {
@@ -194,6 +194,27 @@ export async function saveUserProfile(
     }, { merge: true });
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, `users/${userId}`);
+  }
+}
+
+export async function updateUserTokens(userId: string, tokens: number) {
+  try {
+    await setDoc(doc(db, 'users', userId), {
+      tokens: tokens,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, `users/${userId}/tokens`);
+  }
+}
+
+export async function getAllUserProfiles() {
+  try {
+    const snap = await getDocs(collection(db, 'users'));
+    return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, 'users');
+    return [];
   }
 }
 
