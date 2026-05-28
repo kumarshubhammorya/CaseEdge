@@ -3,6 +3,9 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
+import { AsyncLocalStorage } from 'async_hooks';
+
+export const requestContext = new AsyncLocalStorage<{ apiKeyOverride?: string; activeModel?: string }>();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -53,7 +56,12 @@ const FALLBACK_MODELS = ['gemini-3.1-flash-lite'];
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
 async function safeGenAI(promptContents: any, schema?: any, ignored1 = 3, ignored2 = 1000): Promise<any> {
-  const modelsToTry = [PRIMARY_MODEL, ...FALLBACK_MODELS];
+  const store = requestContext.getStore();
+  const overrideModel = store?.activeModel;
+  
+  const modelsToTry = overrideModel 
+    ? [overrideModel, PRIMARY_MODEL, ...FALLBACK_MODELS] 
+    : [PRIMARY_MODEL, ...FALLBACK_MODELS];
   let lastError: any = null;
 
   for (let m = 0; m < modelsToTry.length; m++) {
@@ -63,7 +71,7 @@ async function safeGenAI(promptContents: any, schema?: any, ignored1 = 3, ignore
 
     while (retries >= 0) {
       try {
-        const apiKey = process.env.GEMINI_API_KEY;
+        const apiKey = store?.apiKeyOverride || process.env.GEMINI_API_KEY;
         if (!apiKey) {
           throw new Error("GEMINI_API_KEY environment variable is not defined on the server.");
         }
@@ -688,7 +696,7 @@ app.get('/health', (req, res) => {
 
 // API proxy endpoint
 app.post('/api/gemini/generate', async (req, res) => {
-  const { action, args } = req.body;
+  const { action, args, config } = req.body;
   if (!action || !actions[action]) {
     return res.status(400).json({ error: `Unknown action: ${action}` });
   }
@@ -702,18 +710,23 @@ app.post('/api/gemini/generate', async (req, res) => {
     return res.json({ result: cached.data });
   }
 
-  try {
-    const result = await actions[action](...(args || []));
-    apiCache.set(cacheKey, {
-      data: result,
-      expiry: now + CACHE_TTL_MS
-    });
-    console.log(`[Cache Miss/Set] Action: ${action} (Key: ${cacheKey.substring(0, 8)})`);
-    res.json({ result });
-  } catch (error: any) {
-    console.error(`Error in action ${action}:`, error);
-    res.status(500).json({ error: error.message || 'Internal server error' });
-  }
+  requestContext.run({ 
+    apiKeyOverride: config?.apiKeyOverride, 
+    activeModel: config?.activeModel 
+  }, async () => {
+    try {
+      const result = await actions[action](...(args || []));
+      apiCache.set(cacheKey, {
+        data: result,
+        expiry: now + CACHE_TTL_MS
+      });
+      console.log(`[Cache Miss/Set] Action: ${action} (Key: ${cacheKey.substring(0, 8)})`);
+      res.json({ result });
+    } catch (error: any) {
+      console.error(`Error in action ${action}:`, error);
+      res.status(500).json({ error: error.message || 'Internal server error' });
+    }
+  });
 });
 
 // Serve static assets in production

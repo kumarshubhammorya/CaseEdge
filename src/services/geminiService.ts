@@ -4,13 +4,29 @@ import { telemetry } from "../lib/telemetry";
 async function callProxy(action: string, args: any[]): Promise<any> {
   const startTime = performance.now();
   let success = false;
+
+  // Retrieve active config parameters from localStorage
+  const configStr = localStorage.getItem('caseedge-system-config');
+  let configPayload = null;
+  if (configStr) {
+    try {
+      const configObj = JSON.parse(configStr);
+      configPayload = {
+        activeModel: configObj.activeModel,
+        apiKeyOverride: configObj.geminiApiKeyOverride
+      };
+    } catch (e) {
+      console.error("Error parsing system config override:", e);
+    }
+  }
+
   try {
     const response = await fetch('/api/gemini/generate', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ action, args }),
+      body: JSON.stringify({ action, args, config: configPayload }),
     });
     
     if (!response.ok) {

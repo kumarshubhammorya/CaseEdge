@@ -132,6 +132,18 @@ class TelemetryService {
     }
   }
 
+  public logEvent(eventName: string, metadata?: any) {
+    console.log(`[Telemetry Event] ${eventName}:`, metadata);
+    if (this.sentryInitialized) {
+      Sentry.withScope((scope) => {
+        if (metadata) {
+          scope.setExtras(metadata);
+        }
+        Sentry.captureMessage(`Event: ${eventName}`, 'info');
+      });
+    }
+  }
+
   public isSentryActive(): boolean {
     return this.sentryInitialized;
   }

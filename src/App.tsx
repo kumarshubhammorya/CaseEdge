@@ -23,14 +23,33 @@ import { useAuth } from './lib/AuthContext';
 import { exportSessionToPdf } from './lib/exportUtils';
 import { sounds } from './lib/sounds';
 import { DiagnosticsPanel } from './components/DiagnosticsPanel';
-import { Lock, BookOpen } from 'lucide-react';
+import { Lock, BookOpen, Settings } from 'lucide-react';
 import { saveCaseAnalytics, updateUserTokens, saveUserProfile, getUserProfile } from './lib/firestoreService';
 import { db } from './lib/firebase';
 import { onSnapshot, doc, getDoc } from 'firebase/firestore';
 
 
+interface SystemConfig {
+  maintenanceMode: boolean;
+  signupBonusTokens: number;
+  aiEvaluationCost: number;
+  hintCost: number;
+  activeModel: string;
+  geminiApiKeyOverride: string;
+}
+
+const DEFAULT_SYSTEM_CONFIG: SystemConfig = {
+  maintenanceMode: false,
+  signupBonusTokens: 55,
+  aiEvaluationCost: 15,
+  hintCost: 2,
+  activeModel: 'gemini-1.5-flash',
+  geminiApiKeyOverride: ''
+};
+
 export default function App() {
   const [showLanding, setShowLanding] = useState(true);
+  const [systemConfig, setSystemConfig] = useState<SystemConfig>(DEFAULT_SYSTEM_CONFIG);
   const [showUserGuide, setShowUserGuide] = useState(false);
   const [showCaseBriefDrawer, setShowCaseBriefDrawer] = useState(false);
   const [activeSection, setActiveSection] = useState('intake');
@@ -142,6 +161,32 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [appState.tokens, user]);
 
+  // 3. Real-time Firestore system config listener
+  useEffect(() => {
+    const unsubscribe = onSnapshot(doc(db, 'system_config', 'default'), (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        const updatedConfig = {
+          maintenanceMode: !!data.maintenanceMode,
+          signupBonusTokens: data.signupBonusTokens ?? 50,
+          aiEvaluationCost: data.aiEvaluationCost ?? 15,
+          hintCost: data.hintCost ?? 2,
+          activeModel: data.activeModel || 'gemini-1.5-flash',
+          geminiApiKeyOverride: data.geminiApiKeyOverride || ''
+        };
+        setSystemConfig(updatedConfig);
+        localStorage.setItem('caseedge-system-config', JSON.stringify(updatedConfig));
+      } else {
+        setSystemConfig(DEFAULT_SYSTEM_CONFIG);
+        localStorage.setItem('caseedge-system-config', JSON.stringify(DEFAULT_SYSTEM_CONFIG));
+      }
+    }, (error) => {
+      console.error("Error listening to system config:", error);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   const handleExport = async () => {
     try {
       await exportSessionToPdf(appState);
@@ -190,6 +235,36 @@ export default function App() {
     setShowLanding(false);
     setShowUserGuide(true);
   };
+
+  const userEmail = user?.email?.toLowerCase().trim();
+  const isAdmin = userEmail === 'kumarshubhammorya@gmail.com';
+  const showMaintenance = systemConfig.maintenanceMode && !isAdmin;
+
+  if (showMaintenance) {
+    return (
+      <div className="bg-[#0f172a] text-slate-200 font-sans h-screen flex flex-col items-center justify-center relative p-6 overflow-hidden">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
+        
+        <div className="max-w-md w-full bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-2xl p-8 text-center shadow-2xl relative">
+          <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500" />
+          
+          <div className="w-16 h-16 rounded-full bg-blue-500/10 flex items-center justify-center mx-auto mb-6 text-blue-400 border border-blue-500/20">
+            <Settings className="w-8 h-8 animate-spin-slow" />
+          </div>
+          
+          <h2 className="text-2xl font-bold text-white mb-3 font-heading">Scheduled Maintenance</h2>
+          <p className="text-slate-400 text-sm mb-6 leading-relaxed">
+            CaseEdge is currently undergoing scheduled system upgrades. We will be back online shortly. Thanks for your patience!
+          </p>
+          
+          <div className="text-[10px] text-slate-600 font-mono tracking-wider uppercase border-t border-slate-850 pt-4">
+            Status: System Offline
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (showLanding) {
     return <Landing onLaunch={handleLaunch} />;

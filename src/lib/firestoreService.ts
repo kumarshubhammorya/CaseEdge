@@ -257,3 +257,28 @@ export async function getCaseAnalytics() {
   }
 }
 
+export async function getSystemConfig() {
+  try {
+    const docRef = doc(db, 'system_config', 'default');
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      return docSnap.data();
+    }
+    return null;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, 'system_config/default');
+    return null;
+  }
+}
+
+export async function saveSystemConfig(data: any) {
+  try {
+    await setDoc(doc(db, 'system_config', 'default'), {
+      ...data,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, 'system_config/default');
+  }
+}
+

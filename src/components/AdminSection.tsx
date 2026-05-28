@@ -14,9 +14,9 @@ import {
   Loader2
 } from 'lucide-react';
 import { db } from '../lib/firebase';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import { telemetry } from '../lib/telemetry';
-import { updateUserTokens } from '../lib/firestoreService';
+import { updateUserTokens, saveSystemConfig } from '../lib/firestoreService';
 import { toast } from 'sonner';
 import { sounds } from '../lib/sounds';
 
@@ -40,9 +40,18 @@ export function AdminSection() {
   // User list and directory states
   const [usersList, setUsersList] = React.useState<any[]>([]);
   const [loadingUsers, setLoadingUsers] = React.useState(false);
-  const [activeTab, setActiveTab] = React.useState<'users' | 'telemetry'>('users');
+  const [activeTab, setActiveTab] = React.useState<'users' | 'telemetry' | 'config'>('users');
   const [searchQuery, setSearchQuery] = React.useState('');
   const [customTokenInputs, setCustomTokenInputs] = React.useState<{ [userId: string]: string }>({});
+
+  // System config states
+  const [configMaintenance, setConfigMaintenance] = React.useState(false);
+  const [configSignupBonus, setConfigSignupBonus] = React.useState(50);
+  const [configAiCost, setConfigAiCost] = React.useState(15);
+  const [configHintCost, setConfigHintCost] = React.useState(2);
+  const [configActiveModel, setConfigActiveModel] = React.useState('gemini-1.5-flash');
+  const [configApiKeyOverride, setConfigApiKeyOverride] = React.useState('');
+  const [savingConfig, setSavingConfig] = React.useState(false);
 
   const fetchMetrics = React.useCallback(async () => {
     setRefreshing(true);
@@ -112,8 +121,28 @@ export function AdminSection() {
       });
     });
 
-    // 2. Fetch Firestore counts
+    // 2. Fetch Firestore counts & users
     fetchMetrics();
+
+    // 3. Load default system configuration
+    async function loadConfig() {
+      try {
+        const docRef = doc(db, 'system_config', 'default');
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setConfigMaintenance(!!data.maintenanceMode);
+          setConfigSignupBonus(data.signupBonusTokens ?? 50);
+          setConfigAiCost(data.aiEvaluationCost ?? 15);
+          setConfigHintCost(data.hintCost ?? 2);
+          setConfigActiveModel(data.activeModel || 'gemini-1.5-flash');
+          setConfigApiKeyOverride(data.geminiApiKeyOverride || '');
+        }
+      } catch (err) {
+        console.error("Error loading system config inside Admin:", err);
+      }
+    }
+    loadConfig();
 
     return () => unsubscribe();
   }, [fetchMetrics]);
@@ -184,6 +213,33 @@ export function AdminSection() {
         {initials}
       </div>
     );
+  };
+
+  const handleSaveConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingConfig(true);
+    sounds.playClick();
+    try {
+      await saveSystemConfig({
+        maintenanceMode: configMaintenance,
+        signupBonusTokens: Number(configSignupBonus),
+        aiEvaluationCost: Number(configAiCost),
+        hintCost: Number(configHintCost),
+        activeModel: configActiveModel,
+        geminiApiKeyOverride: configApiKeyOverride.trim()
+      });
+      telemetry.logEvent('Admin Update System Config', {
+        maintenanceMode: configMaintenance,
+        activeModel: configActiveModel
+      });
+      toast.success("System configurations saved successfully!");
+      sounds.playTransition();
+    } catch (err: any) {
+      console.error("Error saving system config:", err);
+      toast.error("Failed to save config: " + err.message);
+    } finally {
+      setSavingConfig(false);
+    }
   };
 
   const userEmail = user?.email?.toLowerCase().trim();
@@ -305,6 +361,21 @@ export function AdminSection() {
             <Activity className="w-4 h-4 text-purple-400" />
             <span>System Telemetry Feed</span>
           </button>
+
+          <button
+            onClick={() => {
+              sounds.playClick();
+              setActiveTab('config');
+            }}
+            className={`text-xs uppercase font-bold tracking-wider py-2.5 border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
+              activeTab === 'config'
+                ? 'border-emerald-500 text-emerald-400 font-extrabold'
+                : 'border-transparent text-slate-500 hover:text-slate-400'
+            }`}
+          >
+            <Settings className="w-4 h-4 text-emerald-400" />
+            <span>Global Configurations</span>
+          </button>
         </div>
 
         {activeTab === 'users' ? (
@@ -417,7 +488,7 @@ export function AdminSection() {
               )}
             </div>
           </div>
-        ) : (
+        ) : activeTab === 'telemetry' ? (
           <div className="flex-1 flex flex-col min-h-0">
             {/* Live Telemetry & Activity Feed */}
             <div className="flex-1 overflow-y-auto custom-scrollbar border border-slate-800 rounded-lg bg-slate-950/40 p-4">
@@ -464,6 +535,149 @@ export function AdminSection() {
                 </div>
               )}
             </div>
+          </div>
+        ) : (
+          <div className="flex-1 flex flex-col min-h-0 overflow-y-auto custom-scrollbar p-1">
+            {/* Global Configurations Form */}
+            <form onSubmit={handleSaveConfig} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                {/* Maintenance Mode Toggle */}
+                <div className="md:col-span-2 bg-slate-950/40 border border-slate-800 rounded-xl p-4 flex justify-between items-center">
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wide">Maintenance Mode</h4>
+                    <p className="text-[11px] text-slate-505 font-sans mt-0.5">Toggle site offline blocking. Admins will bypass the lock screen to manage the dashboard.</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={configMaintenance} 
+                      onChange={(e) => {
+                        sounds.playClick();
+                        setConfigMaintenance(e.target.checked);
+                      }}
+                      className="sr-only peer" 
+                    />
+                    <div className="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-350 after:border-slate-350 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600 peer-checked:after:bg-white border border-slate-700"></div>
+                  </label>
+                </div>
+
+                {/* Token Pricing Settings */}
+                <div className="md:col-span-2 border-b border-slate-850 pb-2 mt-2">
+                  <h4 className="text-[10px] font-bold text-blue-400 uppercase tracking-wider">Token Trial & Cost Controls</h4>
+                </div>
+
+                {/* Signup Bonus Input */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
+                    Signup Bonus Tokens
+                  </label>
+                  <div className="relative">
+                    <Coins className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-550" />
+                    <input
+                      type="number"
+                      value={configSignupBonus}
+                      onChange={(e) => setConfigSignupBonus(Number(e.target.value))}
+                      className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-xl py-2.5 pl-10 pr-4 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono"
+                      required
+                      min={0}
+                    />
+                  </div>
+                </div>
+
+                {/* AI Evaluation Cost Input */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
+                    Socratic Evaluation Cost (Tokens)
+                  </label>
+                  <div className="relative">
+                    <Coins className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-550" />
+                    <input
+                      type="number"
+                      value={configAiCost}
+                      onChange={(e) => setConfigAiCost(Number(e.target.value))}
+                      className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-xl py-2.5 pl-10 pr-4 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono"
+                      required
+                      min={0}
+                    />
+                  </div>
+                </div>
+
+                {/* Socratic Hint Cost Input */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
+                    Socratic Hint Cost (Tokens)
+                  </label>
+                  <div className="relative">
+                    <Coins className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-550" />
+                    <input
+                      type="number"
+                      value={configHintCost}
+                      onChange={(e) => setConfigHintCost(Number(e.target.value))}
+                      className="w-full bg-slate-955 border border-slate-800 focus:border-blue-500 rounded-xl py-2.5 pl-10 pr-4 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono"
+                      required
+                      min={0}
+                    />
+                  </div>
+                </div>
+
+                {/* Model and Key Settings */}
+                <div className="md:col-span-2 border-b border-slate-850 pb-2 mt-4">
+                  <h4 className="text-[10px] font-bold text-purple-400 uppercase tracking-wider">AI Model & Key Settings</h4>
+                </div>
+
+                {/* Model Selection Dropdown */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
+                    Active AI Model
+                  </label>
+                  <select
+                    value={configActiveModel}
+                    onChange={(e) => setConfigActiveModel(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500 font-sans"
+                  >
+                    <option value="gemini-1.5-flash">Gemini 1.5 Flash (Default)</option>
+                    <option value="gemini-1.5-pro">Gemini 1.5 Pro (Advanced)</option>
+                    <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash Experimental</option>
+                    <option value="gemini-2.5-pro">Gemini 2.5 Pro (Experimental)</option>
+                  </select>
+                </div>
+
+                {/* API Key Override Input */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
+                    Gemini API Key Override
+                  </label>
+                  <div className="relative">
+                    <Database className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-550" />
+                    <input
+                      type="password"
+                      value={configApiKeyOverride}
+                      onChange={(e) => setConfigApiKeyOverride(e.target.value)}
+                      placeholder="AIzaSy... (Leave empty to use server default key)"
+                      className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-xl py-2.5 pl-10 pr-4 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono"
+                    />
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Submit Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800/50">
+                <button
+                  type="submit"
+                  disabled={savingConfig}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-600/50 text-white text-xs font-bold uppercase tracking-wider transition-all shadow-md shadow-emerald-600/20 hover:scale-[1.01] active:scale-[0.99] disabled:scale-100 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  {savingConfig ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <CheckCircle className="w-4 h-4" />
+                  )}
+                  <span>{savingConfig ? 'Saving...' : 'Save Settings'}</span>
+                </button>
+              </div>
+            </form>
           </div>
         )}
       </div>

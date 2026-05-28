@@ -61,5 +61,10 @@ service cloud.firestore {
       allow read: if isSignedIn() && (resource.data.ownerId == request.auth.uid || isAdmin());
       allow write: if isSignedIn() && (request.resource.data.ownerId == request.auth.uid || isAdmin());
     }
+
+    match /system_config/{configId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
   }
 }
