@@ -48,7 +48,10 @@ const DEFAULT_SYSTEM_CONFIG: SystemConfig = {
 };
 
 export default function App() {
-  const [showLanding, setShowLanding] = useState(true);
+  // Persist landing state across OAuth redirect round-trips via sessionStorage
+  const [showLanding, setShowLanding] = useState(() => {
+    return sessionStorage.getItem('caseedge_app_launched') !== 'true';
+  });
   const [systemConfig, setSystemConfig] = useState<SystemConfig>(DEFAULT_SYSTEM_CONFIG);
   const [showUserGuide, setShowUserGuide] = useState(false);
   const [showCaseBriefDrawer, setShowCaseBriefDrawer] = useState(false);
@@ -232,9 +235,18 @@ export default function App() {
 
   const handleLaunch = () => {
     sounds.playLaunch();
+    sessionStorage.setItem('caseedge_app_launched', 'true');
     setShowLanding(false);
     setShowUserGuide(true);
   };
+
+  // Auto-skip landing page if user is already signed in (e.g. after OAuth redirect)
+  useEffect(() => {
+    if (user && !user.isAnonymous) {
+      sessionStorage.setItem('caseedge_app_launched', 'true');
+      setShowLanding(false);
+    }
+  }, [user]);
 
   const userEmail = user?.email?.toLowerCase().trim();
   const isAdmin = userEmail === 'kumarshubhammorya@gmail.com';
