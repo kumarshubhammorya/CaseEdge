@@ -136,6 +136,7 @@ export const Landing: React.FC<LandingProps> = ({ onLaunch }) => {
             <button onClick={scrollToFeatures} className="hover:text-white transition-colors focus-visible:text-white focus-visible:outline-none">Features</button>
             <button onClick={scrollToHowItWorks} className="hover:text-white transition-colors focus-visible:text-white focus-visible:outline-none">How It Works</button>
             <button onClick={scrollToAbout} className="hover:text-white transition-colors focus-visible:text-white focus-visible:outline-none">About</button>
+            <a href="https://blog.caseedge.in" className="hover:text-white transition-colors focus-visible:text-white focus-visible:outline-none">Blog</a>
           </div>
           <motion.button 
             onClick={onLaunch}
@@ -525,6 +526,7 @@ export const Landing: React.FC<LandingProps> = ({ onLaunch }) => {
           </div>
           <div className="flex flex-wrap justify-center gap-4 md:gap-6">
             <button onClick={onLaunch} className="hover:text-[#00d4ff] transition-colors focus-visible:text-[#00d4ff] focus-visible:outline-none">Launch App</button>
+            <a href="https://blog.caseedge.in" className="hover:text-[#00d4ff] transition-colors focus-visible:text-[#00d4ff] focus-visible:outline-none">Blog</a>
             <a href="https://www.linkedin.com/in/shubham-kumar-b79969232/" target="_blank" rel="noopener noreferrer" className="hover:text-[#00d4ff] transition-colors focus-visible:text-[#00d4ff] focus-visible:outline-none">LinkedIn</a>
           </div>
           <div className="opacity-60">Powered by AI</div>

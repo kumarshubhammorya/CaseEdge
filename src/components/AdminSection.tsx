@@ -11,12 +11,31 @@ import {
   User,
   Coins,
   Search,
-  Loader2
+  Loader2,
+  BookOpen,
+  Edit,
+  Trash2,
+  Plus,
+  Sparkles,
+  Filter,
+  Globe,
+  X,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import { telemetry } from '../lib/telemetry';
-import { updateUserTokens, saveSystemConfig } from '../lib/firestoreService';
+import { 
+  updateUserTokens, 
+  saveSystemConfig,
+  deletePublicCase,
+  savePublicCase,
+  updatePublicCase,
+  getSystemSecrets,
+  saveSystemSecrets
+} from '../lib/firestoreService';
+import { generateCaseBrief } from '../services/geminiService';
 import { toast } from 'sonner';
 import { sounds } from '../lib/sounds';
 
@@ -40,9 +59,31 @@ export function AdminSection() {
   // User list and directory states
   const [usersList, setUsersList] = React.useState<any[]>([]);
   const [loadingUsers, setLoadingUsers] = React.useState(false);
-  const [activeTab, setActiveTab] = React.useState<'users' | 'telemetry' | 'config'>('users');
+  const [activeTab, setActiveTab] = React.useState<'users' | 'telemetry' | 'config' | 'library'>('users');
   const [searchQuery, setSearchQuery] = React.useState('');
   const [customTokenInputs, setCustomTokenInputs] = React.useState<{ [userId: string]: string }>({});
+
+  // Public Case Library states
+  const [publicCases, setPublicCases] = React.useState<any[]>([]);
+  const [librarySearchQuery, setLibrarySearchQuery] = React.useState('');
+  const [difficultyFilter, setDifficultyFilter] = React.useState<string>('All');
+  const [industryFilter, setIndustryFilter] = React.useState<string>('All');
+
+  // Manual Add/Edit states
+  const [showEditModal, setShowEditModal] = React.useState(false);
+  const [editingCase, setEditingCase] = React.useState<any | null>(null); // null if adding new
+  const [editTitle, setEditTitle] = React.useState('');
+  const [editDescription, setEditDescription] = React.useState('');
+  const [editIndustry, setEditIndustry] = React.useState('');
+  const [editDifficulty, setEditDifficulty] = React.useState('Intermediate');
+  const [editExtractedText, setEditExtractedText] = React.useState('');
+  const [savingCase, setSavingCase] = React.useState(false);
+
+  // AI Case Generator states
+  const [showGeneratorModal, setShowGeneratorModal] = React.useState(false);
+  const [generatorPrompt, setGeneratorPrompt] = React.useState('');
+  const [generatingCase, setGeneratingCase] = React.useState(false);
+  const [generatedCasePreview, setGeneratedCasePreview] = React.useState<any | null>(null);
 
   // System config states
   const [configMaintenance, setConfigMaintenance] = React.useState(false);
@@ -51,7 +92,15 @@ export function AdminSection() {
   const [configHintCost, setConfigHintCost] = React.useState(2);
   const [configActiveModel, setConfigActiveModel] = React.useState('gemini-1.5-flash');
   const [configApiKeyOverride, setConfigApiKeyOverride] = React.useState('');
+  const [configResendKey, setConfigResendKey] = React.useState('');
+  const [configStripeSecretKey, setConfigStripeSecretKey] = React.useState('');
+  const [configStripeWebhookSecret, setConfigStripeWebhookSecret] = React.useState('');
+  const [showSecrets, setShowSecrets] = React.useState<{ [key: string]: boolean }>({});
   const [savingConfig, setSavingConfig] = React.useState(false);
+
+  const toggleShowSecret = (key: string) => {
+    setShowSecrets(prev => ({ ...prev, [key]: !prev[key] }));
+  };
 
   const fetchMetrics = React.useCallback(async () => {
     setRefreshing(true);
@@ -89,8 +138,25 @@ export function AdminSection() {
           updatedAt: data.updatedAt
         });
       });
+      
+      const pubCases: any[] = [];
+      publicSnap.forEach(doc => {
+        const data = doc.data();
+        pubCases.push({
+          id: doc.id,
+          ownerId: data.ownerId || '',
+          ownerName: data.ownerName || 'System',
+          title: data.title || data.name || 'Untitled Case',
+          description: data.description || '',
+          industry: data.industry || 'General',
+          difficulty: data.difficulty || 'Intermediate',
+          extractedText: data.extractedText || '',
+          createdAt: data.createdAt
+        });
+      });
 
       setUsersList(uList);
+      setPublicCases(pubCases);
       setMetrics({
         totalPrivateCases: privateCount,
         totalPublicCases: publicCount,
@@ -136,7 +202,15 @@ export function AdminSection() {
           setConfigAiCost(data.aiEvaluationCost ?? 15);
           setConfigHintCost(data.hintCost ?? 2);
           setConfigActiveModel(data.activeModel || 'gemini-1.5-flash');
-          setConfigApiKeyOverride(data.geminiApiKeyOverride || '');
+        }
+
+        // Load credentials from the secure document
+        const secrets = await getSystemSecrets();
+        if (secrets) {
+          setConfigApiKeyOverride(secrets.geminiApiKeyOverride || '');
+          setConfigResendKey(secrets.resendApiKey || '');
+          setConfigStripeSecretKey(secrets.stripeSecretKey || '');
+          setConfigStripeWebhookSecret(secrets.stripeWebhookSecret || '');
         }
       } catch (err) {
         console.error("Error loading system config inside Admin:", err);
@@ -220,25 +294,199 @@ export function AdminSection() {
     setSavingConfig(true);
     sounds.playClick();
     try {
+      // 1. Save public configurations
       await saveSystemConfig({
         maintenanceMode: configMaintenance,
         signupBonusTokens: Number(configSignupBonus),
         aiEvaluationCost: Number(configAiCost),
         hintCost: Number(configHintCost),
-        activeModel: configActiveModel,
-        geminiApiKeyOverride: configApiKeyOverride.trim()
+        activeModel: configActiveModel
       });
-      telemetry.logEvent('Admin Update System Config', {
+
+      // 2. Save credentials (API keys) in the secure secrets collection
+      await saveSystemSecrets({
+        geminiApiKeyOverride: configApiKeyOverride.trim(),
+        resendApiKey: configResendKey.trim(),
+        stripeSecretKey: configStripeSecretKey.trim(),
+        stripeWebhookSecret: configStripeWebhookSecret.trim()
+      });
+
+      telemetry.logEvent('Admin Update System Config and Secrets', {
         maintenanceMode: configMaintenance,
         activeModel: configActiveModel
       });
-      toast.success("System configurations saved successfully!");
+      toast.success("System configurations and credentials saved successfully!");
       sounds.playTransition();
     } catch (err: any) {
-      console.error("Error saving system config:", err);
-      toast.error("Failed to save config: " + err.message);
+      console.error("Error saving system config and credentials:", err);
+      toast.error("Failed to save: " + err.message);
     } finally {
       setSavingConfig(false);
+    }
+  };
+
+  const handleDeleteCase = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this public case? This cannot be undone.")) return;
+    try {
+      sounds.playClick();
+      await deletePublicCase(id);
+      setPublicCases(prev => prev.filter(c => c.id !== id));
+      toast.success("Public case deleted successfully!");
+    } catch (err: any) {
+      console.error("Error deleting public case:", err);
+      toast.error("Failed to delete case: " + err.message);
+    }
+  };
+
+  const handleOpenEditModal = (caseObj?: any) => {
+    sounds.playClick();
+    if (caseObj) {
+      setEditingCase(caseObj);
+      setEditTitle(caseObj.title);
+      setEditDescription(caseObj.description);
+      setEditIndustry(caseObj.industry);
+      setEditDifficulty(caseObj.difficulty);
+      setEditExtractedText(caseObj.extractedText);
+    } else {
+      setEditingCase(null);
+      setEditTitle('');
+      setEditDescription('');
+      setEditIndustry('');
+      setEditDifficulty('Intermediate');
+      setEditExtractedText('');
+    }
+    setShowEditModal(true);
+  };
+
+  const handleSaveCaseSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editTitle.trim() || !editExtractedText.trim()) {
+      toast.error("Title and Case Brief are required!");
+      return;
+    }
+    setSavingCase(true);
+    sounds.playClick();
+    try {
+      if (editingCase) {
+        // Edit flow
+        await updatePublicCase(editingCase.id, {
+          title: editTitle.trim(),
+          description: editDescription.trim(),
+          industry: editIndustry.trim(),
+          difficulty: editDifficulty,
+          extractedText: editExtractedText.trim()
+        });
+        
+        setPublicCases(prev => prev.map(c => {
+          if (c.id === editingCase.id) {
+            return {
+              ...c,
+              title: editTitle.trim(),
+              description: editDescription.trim(),
+              industry: editIndustry.trim(),
+              difficulty: editDifficulty,
+              extractedText: editExtractedText.trim()
+            };
+          }
+          return c;
+        }));
+        toast.success("Public case updated successfully!");
+      } else {
+        // Add flow
+        const newId = await savePublicCase(
+          editTitle.trim(),
+          editDescription.trim(),
+          editIndustry.trim(),
+          editDifficulty,
+          editExtractedText.trim()
+        );
+        
+        setPublicCases(prev => [
+          {
+            id: newId,
+            ownerId: user?.uid || '',
+            ownerName: user?.displayName || user?.email || 'Admin',
+            title: editTitle.trim(),
+            description: editDescription.trim(),
+            industry: editIndustry.trim(),
+            difficulty: editDifficulty,
+            extractedText: editExtractedText.trim(),
+            createdAt: new Date().toISOString()
+          },
+          ...prev
+        ]);
+        toast.success("New public case added successfully!");
+      }
+      setShowEditModal(false);
+      sounds.playTransition();
+    } catch (err: any) {
+      console.error("Error saving public case:", err);
+      toast.error("Failed to save case: " + err.message);
+    } finally {
+      setSavingCase(false);
+    }
+  };
+
+  const handleGenerateCase = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!generatorPrompt.trim()) {
+      toast.error("Please enter a prompt describing the case!");
+      return;
+    }
+    setGeneratingCase(true);
+    setGeneratedCasePreview(null);
+    sounds.playClick();
+    try {
+      const response = await generateCaseBrief(generatorPrompt.trim());
+      setGeneratedCasePreview(response);
+      toast.success("AI Case Brief generated successfully!");
+      sounds.playTransition();
+    } catch (err: any) {
+      console.error("Error generating case via AI:", err);
+      toast.error("Failed to generate case: " + err.message);
+    } finally {
+      setGeneratingCase(false);
+    }
+  };
+
+  const handleSaveGeneratedCase = async () => {
+    if (!generatedCasePreview) return;
+    setSavingCase(true);
+    sounds.playClick();
+    try {
+      const newId = await savePublicCase(
+        generatedCasePreview.title || 'AI Generated Case',
+        generatedCasePreview.description || '',
+        generatedCasePreview.industry || 'General',
+        generatedCasePreview.difficulty || 'Intermediate',
+        generatedCasePreview.extractedText || ''
+      );
+      
+      setPublicCases(prev => [
+        {
+          id: newId,
+          ownerId: user?.uid || '',
+          ownerName: user?.displayName || user?.email || 'AI Generator',
+          title: generatedCasePreview.title || 'AI Generated Case',
+          description: generatedCasePreview.description || '',
+          industry: generatedCasePreview.industry || 'General',
+          difficulty: generatedCasePreview.difficulty || 'Intermediate',
+          extractedText: generatedCasePreview.extractedText || '',
+          createdAt: new Date().toISOString()
+        },
+        ...prev
+      ]);
+      
+      toast.success("Generated case added to the library!");
+      setShowGeneratorModal(false);
+      setGeneratorPrompt('');
+      setGeneratedCasePreview(null);
+      sounds.playTransition();
+    } catch (err: any) {
+      console.error("Error saving generated case:", err);
+      toast.error("Failed to save generated case: " + err.message);
+    } finally {
+      setSavingCase(false);
     }
   };
 
@@ -375,6 +623,21 @@ export function AdminSection() {
           >
             <Settings className="w-4 h-4 text-emerald-400" />
             <span>Global Configurations</span>
+          </button>
+          
+          <button
+            onClick={() => {
+              sounds.playClick();
+              setActiveTab('library');
+            }}
+            className={`text-xs uppercase font-bold tracking-wider py-2.5 border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
+              activeTab === 'library'
+                ? 'border-cyan-500 text-cyan-400 font-extrabold'
+                : 'border-transparent text-slate-500 hover:text-slate-400'
+            }`}
+          >
+            <BookOpen className="w-4 h-4 text-cyan-400" />
+            <span>Public Cases</span>
           </button>
         </div>
 
@@ -536,7 +799,7 @@ export function AdminSection() {
               )}
             </div>
           </div>
-        ) : (
+        ) : activeTab === 'config' ? (
           <div className="flex-1 flex flex-col min-h-0 overflow-y-auto custom-scrollbar p-1">
             {/* Global Configurations Form */}
             <form onSubmit={handleSaveConfig} className="space-y-6">
@@ -621,13 +884,13 @@ export function AdminSection() {
                   </div>
                 </div>
 
-                {/* Model and Key Settings */}
+                {/* Model Settings */}
                 <div className="md:col-span-2 border-b border-slate-850 pb-2 mt-4">
-                  <h4 className="text-[10px] font-bold text-purple-400 uppercase tracking-wider">AI Model & Key Settings</h4>
+                  <h4 className="text-[10px] font-bold text-purple-400 uppercase tracking-wider">AI Model Settings</h4>
                 </div>
 
                 {/* Model Selection Dropdown */}
-                <div className="space-y-2">
+                <div className="space-y-2 md:col-span-2">
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
                     Active AI Model
                   </label>
@@ -643,7 +906,12 @@ export function AdminSection() {
                   </select>
                 </div>
 
-                {/* API Key Override Input */}
+                {/* Credentials & Integrations Manager */}
+                <div className="md:col-span-2 border-b border-slate-850 pb-2 mt-6">
+                  <h4 className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider">Credentials & API Integrations (Admin Only)</h4>
+                </div>
+
+                {/* Gemini API Key */}
                 <div className="space-y-2">
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
                     Gemini API Key Override
@@ -651,12 +919,91 @@ export function AdminSection() {
                   <div className="relative">
                     <Database className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-550" />
                     <input
-                      type="password"
+                      type={showSecrets['gemini'] ? 'text' : 'password'}
                       value={configApiKeyOverride}
                       onChange={(e) => setConfigApiKeyOverride(e.target.value)}
-                      placeholder="AIzaSy... (Leave empty to use server default key)"
-                      className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-xl py-2.5 pl-10 pr-4 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono"
+                      placeholder="AIzaSy... (Falls back to server default key if empty)"
+                      className="w-full bg-slate-950 border border-slate-800 focus:border-cyan-500 rounded-xl py-2.5 pl-10 pr-10 text-xs text-white focus:outline-none focus:ring-1 focus:ring-cyan-500 font-mono"
                     />
+                    <button
+                      type="button"
+                      onClick={() => toggleShowSecret('gemini')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-350 transition-colors cursor-pointer"
+                    >
+                      {showSecrets['gemini'] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Resend API Key */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
+                    Resend Email API Key (Future)
+                  </label>
+                  <div className="relative">
+                    <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-550" />
+                    <input
+                      type={showSecrets['resend'] ? 'text' : 'password'}
+                      value={configResendKey}
+                      onChange={(e) => setConfigResendKey(e.target.value)}
+                      placeholder="re_... (For automated email triggers)"
+                      className="w-full bg-slate-950 border border-slate-800 focus:border-cyan-500 rounded-xl py-2.5 pl-10 pr-10 text-xs text-white focus:outline-none focus:ring-1 focus:ring-cyan-500 font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => toggleShowSecret('resend')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-355 transition-colors cursor-pointer"
+                    >
+                      {showSecrets['resend'] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Stripe Secret Key */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
+                    Stripe Secret Key (Future)
+                  </label>
+                  <div className="relative">
+                    <Coins className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-550" />
+                    <input
+                      type={showSecrets['stripe'] ? 'text' : 'password'}
+                      value={configStripeSecretKey}
+                      onChange={(e) => setConfigStripeSecretKey(e.target.value)}
+                      placeholder="sk_live_... (For subscription billing)"
+                      className="w-full bg-slate-955 border border-slate-800 focus:border-cyan-500 rounded-xl py-2.5 pl-10 pr-10 text-xs text-white focus:outline-none focus:ring-1 focus:ring-cyan-500 font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => toggleShowSecret('stripe')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-355 transition-colors cursor-pointer"
+                    >
+                      {showSecrets['stripe'] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Stripe Webhook Secret */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
+                    Stripe Webhook Secret (Future)
+                  </label>
+                  <div className="relative">
+                    <Settings className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-550" />
+                    <input
+                      type={showSecrets['stripeWebhook'] ? 'text' : 'password'}
+                      value={configStripeWebhookSecret}
+                      onChange={(e) => setConfigStripeWebhookSecret(e.target.value)}
+                      placeholder="whsec_... (For verifying webhook events)"
+                      className="w-full bg-slate-950 border border-slate-800 focus:border-cyan-500 rounded-xl py-2.5 pl-10 pr-10 text-xs text-white focus:outline-none focus:ring-1 focus:ring-cyan-500 font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => toggleShowSecret('stripeWebhook')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-355 transition-colors cursor-pointer"
+                    >
+                      {showSecrets['stripeWebhook'] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
                   </div>
                 </div>
 
@@ -679,8 +1026,415 @@ export function AdminSection() {
               </div>
             </form>
           </div>
-        )}
+        ) : activeTab === 'library' ? (
+          <div className="flex-1 flex flex-col min-h-0">
+            {/* Search and Filters */}
+            <div className="flex flex-col sm:flex-row gap-3 mb-4 shrink-0">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-550" />
+                <input
+                  type="text"
+                  value={librarySearchQuery}
+                  onChange={(e) => setLibrarySearchQuery(e.target.value)}
+                  placeholder="Search cases by title, description or industry..."
+                  className="w-full bg-slate-950 border border-slate-800 focus:border-cyan-500 rounded-xl py-2.5 pl-9 pr-4 text-xs text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-cyan-500 transition-all font-sans"
+                />
+              </div>
+              <div className="flex gap-2">
+                <select
+                  value={industryFilter}
+                  onChange={(e) => setIndustryFilter(e.target.value)}
+                  className="bg-slate-950 border border-slate-800 focus:border-cyan-500 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:ring-1 focus:ring-cyan-500 font-sans"
+                >
+                  <option value="All">All Industries</option>
+                  {Array.from(new Set(publicCases.map(c => c.industry).filter(Boolean))).map(ind => (
+                    <option key={ind} value={ind}>{ind}</option>
+                  ))}
+                </select>
+                <select
+                  value={difficultyFilter}
+                  onChange={(e) => setDifficultyFilter(e.target.value)}
+                  className="bg-slate-950 border border-slate-800 focus:border-cyan-500 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:ring-1 focus:ring-cyan-500 font-sans"
+                >
+                  <option value="All">All Difficulties</option>
+                  <option value="Beginner">Beginner</option>
+                  <option value="Intermediate">Intermediate</option>
+                  <option value="Advanced">Advanced</option>
+                </select>
+                <button
+                  onClick={() => handleOpenEditModal()}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold transition-all hover:scale-[1.02] cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Add Case</span>
+                </button>
+                <button
+                  onClick={() => {
+                    sounds.playClick();
+                    setShowGeneratorModal(true);
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-purple-650 to-indigo-650 hover:from-purple-600 hover:to-indigo-600 text-white text-xs font-bold transition-all hover:scale-[1.02] cursor-pointer border border-purple-500/20"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-purple-200" />
+                  <span className="hidden sm:inline">AI Generate</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Cases Table */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar border border-slate-800 rounded-lg bg-slate-950/40">
+              {loadingUsers ? (
+                <div className="h-full flex flex-col items-center justify-center text-slate-450 gap-3 py-10">
+                  <Loader2 className="w-8 h-8 animate-spin text-cyan-500" />
+                  <span className="text-xs font-semibold">Retrieving public library cases...</span>
+                </div>
+              ) : (
+                (() => {
+                  const filteredCases = publicCases.filter(c => {
+                    const sQuery = librarySearchQuery.toLowerCase().trim();
+                    const matchesSearch = !sQuery || (
+                      c.title.toLowerCase().includes(sQuery) ||
+                      c.description.toLowerCase().includes(sQuery) ||
+                      c.industry.toLowerCase().includes(sQuery)
+                    );
+                    const matchesIndustry = industryFilter === 'All' || c.industry === industryFilter;
+                    const matchesDifficulty = difficultyFilter === 'All' || c.difficulty === difficultyFilter;
+                    return matchesSearch && matchesIndustry && matchesDifficulty;
+                  });
+
+                  if (filteredCases.length === 0) {
+                    return (
+                      <div className="h-full flex flex-col items-center justify-center text-slate-500 text-xs py-10">
+                        <BookOpen className="w-10 h-10 opacity-30 text-cyan-400 mb-2" />
+                        <span>No public cases match your search or filters.</span>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <table className="w-full text-left text-[11px] font-sans border-collapse">
+                      <thead>
+                        <tr className="text-slate-500 border-b border-slate-850 bg-slate-900/40 sticky top-0 z-10">
+                          <th className="py-3 px-4 font-bold uppercase tracking-wider bg-[#0f172a]">Case Title</th>
+                          <th className="py-3 px-4 font-bold uppercase tracking-wider bg-[#0f172a]">Industry</th>
+                          <th className="py-3 px-4 font-bold uppercase tracking-wider text-center bg-[#0f172a]">Difficulty</th>
+                          <th className="py-3 px-4 font-bold uppercase tracking-wider bg-[#0f172a]">Owner</th>
+                          <th className="py-3 px-4 font-bold uppercase tracking-wider text-right bg-[#0f172a]">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-850 text-slate-350">
+                        {filteredCases.map((c) => {
+                          let diffColor = 'bg-blue-500/10 text-blue-400 border-blue-500/20';
+                          if (c.difficulty === 'Intermediate') diffColor = 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20';
+                          else if (c.difficulty === 'Advanced') diffColor = 'bg-red-500/10 text-red-400 border-red-500/20';
+
+                          return (
+                            <tr key={c.id} className="hover:bg-slate-900/20 transition-colors">
+                              <td className="py-3 px-4">
+                                <div className="min-w-0">
+                                  <div className="font-bold text-white text-xs truncate max-w-[250px]" title={c.title}>{c.title}</div>
+                                  <div className="text-[10px] text-slate-500 truncate max-w-[250px]" title={c.description}>{c.description}</div>
+                                </div>
+                              </td>
+                              <td className="py-3 px-4">
+                                <span className="truncate max-w-[120px] block font-mono text-slate-400">{c.industry}</span>
+                              </td>
+                              <td className="py-3 px-4 text-center">
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full border text-[9px] font-bold uppercase tracking-wider ${diffColor}`}>
+                                  {c.difficulty}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4">
+                                <span className="truncate max-w-[120px] block text-slate-500">{c.ownerName || 'System'}</span>
+                              </td>
+                              <td className="py-3 px-4 text-right">
+                                <div className="flex items-center justify-end gap-2">
+                                  <button
+                                    onClick={() => handleOpenEditModal(c)}
+                                    className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/50 transition-colors cursor-pointer"
+                                    title="Edit case details"
+                                  >
+                                    <Edit className="w-3.5 h-3.5 p-0.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteCase(c.id)}
+                                    className="p-1 rounded bg-red-950/20 hover:bg-red-650 text-red-400 hover:text-white border border-red-500/25 transition-colors cursor-pointer"
+                                    title="Delete case"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5 p-0.5" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  );
+                })()
+              )}
+            </div>
+          </div>
+        ) : null}
       </div>
+
+      {/* Edit/Create Case Modal Overlay */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="flex justify-between items-center p-5 border-b border-slate-800 bg-slate-950/20">
+              <div className="flex items-center gap-2">
+                <BookOpen className="w-4 h-4 text-cyan-400" />
+                <h3 className="font-heading font-bold text-base text-white">
+                  {editingCase ? 'Modify Public Case' : 'Create New Public Case'}
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleSaveCaseSubmit} className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
+                <div className="space-y-1.5 md:col-span-2">
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Case Title
+                  </label>
+                  <input
+                    type="text"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    placeholder="e.g. BMW: India EV Market Entry Strategy"
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-cyan-500 rounded-xl py-2 px-3 text-xs text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-cyan-500 font-sans"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Industry
+                  </label>
+                  <input
+                    type="text"
+                    value={editIndustry}
+                    onChange={(e) => setEditIndustry(e.target.value)}
+                    placeholder="e.g. Automotive, Technology, Retail"
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-cyan-500 rounded-xl py-2 px-3 text-xs text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-cyan-500 font-sans"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Difficulty Level
+                  </label>
+                  <select
+                    value={editDifficulty}
+                    onChange={(e) => setEditDifficulty(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-cyan-500 rounded-xl py-2 px-3 text-xs text-slate-300 focus:outline-none focus:ring-1 focus:ring-cyan-500 font-sans"
+                  >
+                    <option value="Beginner">Beginner (Easy)</option>
+                    <option value="Intermediate">Intermediate (Medium)</option>
+                    <option value="Advanced">Advanced (Hard)</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5 md:col-span-2">
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Brief Description
+                  </label>
+                  <textarea
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    placeholder="A short description summarizing the client, key problem, and goal."
+                    rows={2}
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-cyan-500 rounded-xl py-2 px-3 text-xs text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-cyan-500 font-sans resize-none"
+                  />
+                </div>
+
+                <div className="space-y-1.5 md:col-span-2">
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Full Case Brief Text (Markdown Supported)
+                  </label>
+                  <textarea
+                    value={editExtractedText}
+                    onChange={(e) => setEditExtractedText(e.target.value)}
+                    placeholder="Provide the complete case brief. Introduce headings (e.g. ## Background), key bullet points, client objectives, constraints, and data/metrics."
+                    rows={8}
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-cyan-500 rounded-xl py-2 px-3 text-xs text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-cyan-500 font-mono resize-y min-h-[120px]"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800 bg-slate-900/10">
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingCase}
+                  className="flex items-center gap-2 px-5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 disabled:bg-cyan-650/50 text-white text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
+                >
+                  {savingCase && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  <span>{savingCase ? 'Saving...' : 'Save Case'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* AI Case Generator Modal */}
+      {showGeneratorModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="flex justify-between items-center p-5 border-b border-slate-800 bg-slate-950/20">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-purple-400" />
+                <h3 className="font-heading font-bold text-base text-white">AI Case Study Generator</h3>
+              </div>
+              <button
+                onClick={() => {
+                  setShowGeneratorModal(false);
+                  setGeneratorPrompt('');
+                  setGeneratedCasePreview(null);
+                }}
+                className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-205 transition-colors cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Content Area */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-5">
+              {!generatedCasePreview ? (
+                <form onSubmit={handleGenerateCase} className="space-y-4 text-left">
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      Describe the case study you want to generate
+                    </label>
+                    <textarea
+                      value={generatorPrompt}
+                      onChange={(e) => setGeneratorPrompt(e.target.value)}
+                      placeholder="e.g. A fast-food chain wants to evaluate whether it should start its own drone delivery service in Chicago. Give them detailed unit economics."
+                      rows={5}
+                      className="w-full bg-slate-950 border border-slate-800 focus:border-purple-500 rounded-xl py-3 px-4 text-xs text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-purple-500 font-sans resize-none"
+                      required
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setShowGeneratorModal(false)}
+                      className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={generatingCase}
+                      className="flex items-center gap-2 px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:bg-purple-600/50 text-white text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shadow-md shadow-purple-600/20 hover:scale-[1.01]"
+                    >
+                      {generatingCase ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Sparkles className="w-3.5 h-3.5 text-purple-200" />
+                      )}
+                      <span>{generatingCase ? 'Generating...' : 'Generate Case'}</span>
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                /* Preview and Save screen */
+                <div className="space-y-4 text-left">
+                  <div className="bg-slate-950/40 border border-slate-800 rounded-xl p-4 space-y-3">
+                    <div className="flex items-center justify-between border-b border-slate-850 pb-2">
+                      <span className="text-[10px] uppercase font-bold text-purple-400 tracking-wider">AI Generation Preview</span>
+                      <span className="text-[9px] bg-purple-500/10 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded font-mono uppercase tracking-wider font-bold">
+                        {generatedCasePreview.difficulty || 'Intermediate'}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                      <div>
+                        <span className="font-bold text-slate-500 block uppercase text-[9px] tracking-wide">Case Title</span>
+                        <p className="font-semibold text-slate-200">{generatedCasePreview.title}</p>
+                      </div>
+                      <div>
+                        <span className="font-bold text-slate-500 block uppercase text-[9px] tracking-wide">Industry</span>
+                        <p className="font-semibold text-slate-200">{generatedCasePreview.industry}</p>
+                      </div>
+                      <div className="md:col-span-2">
+                        <span className="font-bold text-slate-500 block uppercase text-[9px] tracking-wide">Description</span>
+                        <p className="text-slate-350">{generatedCasePreview.description}</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5 pt-2 border-t border-slate-850">
+                      <span className="font-bold text-slate-500 block uppercase text-[9px] tracking-wide">Extracted Case Brief Text</span>
+                      <div className="bg-slate-950 border border-slate-850 rounded-xl p-4 text-[11px] text-slate-300 font-mono whitespace-pre-wrap max-h-[200px] overflow-y-auto custom-scrollbar leading-relaxed">
+                        {generatedCasePreview.extractedText}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setGeneratedCasePreview(null)}
+                      className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
+                    >
+                      ← Back & Edit Prompt
+                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          sounds.playClick();
+                          // Set editor states to edit generated case details manually before saving
+                          setEditingCase(null);
+                          setEditTitle(generatedCasePreview.title || '');
+                          setEditDescription(generatedCasePreview.description || '');
+                          setEditIndustry(generatedCasePreview.industry || '');
+                          setEditDifficulty(generatedCasePreview.difficulty || 'Intermediate');
+                          setEditExtractedText(generatedCasePreview.extractedText || '');
+                          setShowGeneratorModal(false);
+                          setShowEditModal(true);
+                        }}
+                        className="px-4 py-2 rounded-xl bg-slate-850 hover:bg-slate-800 text-slate-300 border border-slate-700/50 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
+                      >
+                        Edit Details
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSaveGeneratedCase}
+                        disabled={savingCase}
+                        className="flex items-center gap-2 px-5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 disabled:bg-cyan-650/50 text-white text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shadow-md shadow-cyan-600/20"
+                      >
+                        {savingCase && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                        <span>Save to Library</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

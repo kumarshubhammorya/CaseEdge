@@ -1,4 +1,5 @@
 import express from 'express';
+import proxy from 'express-http-proxy';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -667,6 +668,28 @@ async function getFrameworkHint(caseBrief: string, caseGlanceJson: string, propo
   );
 }
 
+async function generateCaseBrief(prompt: string) {
+  return await safeGenAI(
+    [
+      { text: "You are an elite consulting case writer for MBA-level case competitions. Based on the user's prompt, generate a realistic, challenging, and detailed business case study. " +
+              "The generated case must match the schema: (1) title (concise and catchy), (2) description (a 1-2 sentence high-level summary), (3) industry (a single word/phrase representing the primary sector), (4) difficulty (Beginner, Intermediate, or Advanced), and (5) extractedText (the full case study description in clean Markdown format with headings, bullet points, client background, key numbers, and core objectives). " +
+              "Ensure the case study has high-quality realistic data, financials (e.g. revenues, costs, margins), or operational details. Respond strictly in English and in JSON." },
+      { text: `Prompt: ${prompt}` }
+    ],
+    {
+      type: Type.OBJECT,
+      properties: {
+        title: { type: Type.STRING },
+        description: { type: Type.STRING },
+        industry: { type: Type.STRING },
+        difficulty: { type: Type.STRING, enum: ["Beginner", "Intermediate", "Advanced"] },
+        extractedText: { type: Type.STRING }
+      },
+      required: ["title", "description", "industry", "difficulty", "extractedText"]
+    }
+  );
+}
+
 const actions: Record<string, Function> = {
   extractCaseFromFile,
   extractCaseFromText,
@@ -688,6 +711,7 @@ const actions: Record<string, Function> = {
   evaluateIntake,
   evaluateFrameworks,
   getFrameworkHint,
+  generateCaseBrief,
 };
 
 app.get('/health', (req, res) => {
@@ -728,6 +752,13 @@ app.post('/api/gemini/generate', async (req, res) => {
     }
   });
 });
+
+// Proxy Firebase Authentication redirect handler to avoid third-party cookie restrictions on custom domains
+app.use('/__/auth', proxy('https://gen-lang-client-0266123161.firebaseapp.com', {
+  proxyReqPathResolver: (req) => {
+    return '/__/auth' + req.url;
+  }
+}));
 
 // Serve static assets in production
 if (process.env.NODE_ENV === 'production') {

@@ -63,7 +63,7 @@ service cloud.firestore {
     }
 
     match /system_config/{configId} {
-      allow read: if true;
+      allow read: if configId != 'secrets' || isAdmin();
       allow write: if isAdmin();
     }
   }

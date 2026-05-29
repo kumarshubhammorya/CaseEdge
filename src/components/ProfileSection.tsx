@@ -49,8 +49,26 @@ const DEMO_DATA = [
 ];
 
 export const ProfileSection: React.FC = () => {
-  const { user, signIn, logout } = useAuth();
+  const { 
+    user, 
+    signIn, 
+    logout, 
+    signUpWithEmail, 
+    signInWithEmail, 
+    sendVerificationEmail, 
+    checkVerificationStatus, 
+    emailVerified 
+  } = useAuth();
   const { appState } = useAppContext();
+
+  // Auth states
+  const [authMethod, setAuthMethod] = useState<'google' | 'email'>('google');
+  const [emailMode, setEmailMode] = useState<'signin' | 'signup'>('signup');
+  const [emailInput, setEmailInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
+  const [confirmPasswordInput, setConfirmPasswordInput] = useState('');
+  const [authLoading, setAuthLoading] = useState(false);
+  const [verifying, setVerifying] = useState(false);
 
   // Navigation state
   const [activeTab, setActiveTab] = useState<'details' | 'analytics'>('details');
@@ -204,6 +222,70 @@ export const ProfileSection: React.FC = () => {
       toast.success("Signed out successfully.");
     } catch (err: any) {
       toast.error('Failed to sign out: ' + err.message);
+    }
+  };
+
+  const handleEmailAuthSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!emailInput.trim() || !passwordInput) {
+      toast.error("Please fill in all fields.");
+      return;
+    }
+
+    if (emailMode === 'signup') {
+      if (passwordInput !== confirmPasswordInput) {
+        toast.error("Passwords do not match.");
+        return;
+      }
+      if (passwordInput.length < 6) {
+        toast.error("Password must be at least 6 characters.");
+        return;
+      }
+    }
+
+    setAuthLoading(true);
+    sounds.playClick();
+
+    try {
+      if (emailMode === 'signup') {
+        await signUpWithEmail(emailInput.trim(), passwordInput);
+        toast.success("Account created! Verification email sent.");
+      } else {
+        await signInWithEmail(emailInput.trim(), passwordInput);
+        toast.success("Logged in successfully!");
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Authentication failed.");
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleCheckVerification = async () => {
+    setVerifying(true);
+    sounds.playClick();
+    try {
+      const verified = await checkVerificationStatus();
+      if (verified) {
+        toast.success("Email verified successfully! Profile unlocked.");
+      } else {
+        toast.info("Email is still unverified. Please check your inbox.");
+      }
+    } catch (err: any) {
+      toast.error("Failed to check status: " + err.message);
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    sounds.playClick();
+    try {
+      await sendVerificationEmail();
+      toast.success("Verification email resent!");
+    } catch (err: any) {
+      toast.error("Failed to send email: " + err.message);
     }
   };
 
@@ -372,22 +454,196 @@ export const ProfileSection: React.FC = () => {
         >
           <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500" />
           
-          <div className="w-16 h-16 rounded-full bg-blue-500/10 flex items-center justify-center mx-auto mb-6 text-blue-400 border border-blue-500/20">
+          <div className="w-16 h-16 rounded-full bg-blue-500/10 flex items-center justify-center mx-auto mb-5 text-blue-400 border border-blue-500/20">
             <User className="w-8 h-8" />
           </div>
           
-          <h2 className="text-2xl font-bold text-white mb-3 font-heading">Manage Your Account</h2>
-          <p className="text-slate-400 text-sm mb-8 leading-relaxed">
+          <h2 className="text-2xl font-bold text-white mb-2 font-heading">Manage Your Account</h2>
+          <p className="text-slate-400 text-xs mb-6 leading-relaxed">
             Create an account or sign in to build your personalized profile, save case summaries, track practice analytics, and unlock premium features.
           </p>
 
-          <button
-            onClick={handleSignIn}
-            className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold transition-all shadow-lg shadow-blue-500/20 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
-          >
-            <LogIn className="w-5 h-5" />
-            <span>Sign In with Google</span>
-          </button>
+          {/* Auth Method Tabs */}
+          <div className="flex bg-slate-955 p-1 rounded-xl border border-slate-850 mb-6">
+            <button
+              type="button"
+              onClick={() => { sounds.playClick(); setAuthMethod('google'); }}
+              className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                authMethod === 'google'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Google
+            </button>
+            <button
+              type="button"
+              onClick={() => { sounds.playClick(); setAuthMethod('email'); }}
+              className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                authMethod === 'email'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Email / Password
+            </button>
+          </div>
+
+          {authMethod === 'google' ? (
+            <button
+              onClick={handleSignIn}
+              className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold transition-all shadow-lg shadow-blue-500/20 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+            >
+              <LogIn className="w-5 h-5" />
+              <span>Sign In with Google</span>
+            </button>
+          ) : (
+            <form onSubmit={handleEmailAuthSubmit} className="space-y-4 text-left">
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                  Email Address
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-550 text-xs select-none">
+                    ✉️
+                  </span>
+                  <input
+                    type="email"
+                    value={emailInput}
+                    onChange={(e) => setEmailInput(e.target.value)}
+                    placeholder="you@example.com"
+                    className="w-full bg-slate-950 border border-slate-850 focus:border-blue-500 rounded-xl py-2.5 pl-8 pr-4 text-xs text-white placeholder-slate-650 focus:outline-none transition-all font-sans"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                  Password
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-550 text-xs select-none">
+                    🔑
+                  </span>
+                  <input
+                    type="password"
+                    value={passwordInput}
+                    onChange={(e) => setPasswordInput(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full bg-slate-950 border border-slate-850 focus:border-blue-500 rounded-xl py-2.5 pl-8 pr-4 text-xs text-white placeholder-slate-650 focus:outline-none transition-all font-sans"
+                    required
+                  />
+                </div>
+              </div>
+
+              {emailMode === 'signup' && (
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                    Confirm Password
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-550 text-xs select-none">
+                      🔒
+                    </span>
+                    <input
+                      type="password"
+                      value={confirmPasswordInput}
+                      onChange={(e) => setConfirmPasswordInput(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full bg-slate-950 border border-slate-850 focus:border-blue-500 rounded-xl py-2.5 pl-8 pr-4 text-xs text-white placeholder-slate-650 focus:outline-none transition-all font-sans"
+                      required
+                    />
+                  </div>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={authLoading}
+                className="w-full flex items-center justify-center gap-2 px-5 py-3 mt-2 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-blue-600/50 text-white font-semibold transition-all shadow-lg shadow-blue-500/20 hover:scale-[1.01] active:scale-[0.99] disabled:scale-100 disabled:cursor-not-allowed cursor-pointer"
+              >
+                {authLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <LogIn className="w-4 h-4" />
+                )}
+                <span>{emailMode === 'signup' ? 'Create Account' : 'Sign In'}</span>
+              </button>
+
+              <div className="text-center pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    sounds.playClick();
+                    setEmailMode(prev => prev === 'signin' ? 'signup' : 'signin');
+                  }}
+                  className="text-xs text-blue-400 hover:underline cursor-pointer focus:outline-none"
+                >
+                  {emailMode === 'signup' ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
+                </button>
+              </div>
+            </form>
+          )}
+        </motion.div>
+      </div>
+    );
+  }
+
+  if (user && !user.isAnonymous && !emailVerified) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center py-10 px-4">
+        <motion.div 
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="max-w-md w-full bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-2xl p-8 text-center shadow-2xl relative overflow-hidden"
+        >
+          <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-amber-500 to-yellow-500" />
+          
+          <div className="w-16 h-16 rounded-full bg-amber-500/10 flex items-center justify-center mx-auto mb-6 text-amber-400 border border-amber-500/20 animate-pulse">
+            <span className="text-2xl">✉️</span>
+          </div>
+          
+          <h2 className="text-2xl font-bold text-white mb-3 font-heading">Verify Your Email</h2>
+          <p className="text-slate-400 text-xs mb-4 leading-relaxed">
+            We sent a verification link to <strong className="text-slate-200">{user.email}</strong>. Please check your inbox and verify your email to unlock your account.
+          </p>
+          
+          <div className="p-3 bg-slate-950/50 border border-slate-850 rounded-xl text-[11px] text-slate-500 mb-6 font-sans">
+            Don't see it? Check your spam folder or resend the verification link.
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={handleCheckVerification}
+              disabled={verifying}
+              className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-blue-600/50 text-white font-semibold transition-all shadow-lg shadow-blue-500/20 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+            >
+              {verifying ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <span className="text-xs">🔄</span>
+              )}
+              <span>I've Verified My Email</span>
+            </button>
+
+            <div className="flex justify-between items-center gap-4 mt-2">
+              <button
+                onClick={handleResendVerification}
+                className="text-xs text-blue-400 hover:underline cursor-pointer focus:outline-none"
+              >
+                Resend Email
+              </button>
+              
+              <button
+                onClick={handleSignOut}
+                className="text-xs text-red-400 hover:underline cursor-pointer focus:outline-none flex items-center gap-1"
+              >
+                <LogOut className="w-3 h-3" />
+                <span>Sign Out</span>
+              </button>
+            </div>
+          </div>
         </motion.div>
       </div>
     );

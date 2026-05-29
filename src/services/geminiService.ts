@@ -126,3 +126,7 @@ export async function evaluateFrameworks(proposedFrameworks: string, caseBrief: 
 export async function getFrameworkHint(caseBrief: string, caseGlanceJson: string, proposedFrameworks: string, hintsCount: number) {
   return callProxy('getFrameworkHint', [caseBrief, caseGlanceJson, proposedFrameworks, hintsCount]);
 }
+
+export async function generateCaseBrief(prompt: string) {
+  return callProxy('generateCaseBrief', [prompt]);
+}
