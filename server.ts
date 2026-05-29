@@ -39,7 +39,7 @@ async function fetchGoogleCerts(forceRefetch = false): Promise<Record<string, st
   }
   
   return new Promise((resolve, reject) => {
-    https.get('https://www.googleapis.com/robot/v1/metadata/x509/securetoken-system%40system.gserviceaccount.com', (res) => {
+    https.get('https://www.googleapis.com/robot/v1/metadata/x509/securetoken%40system.gserviceaccount.com', (res) => {
       let data = '';
       const cacheControl = res.headers['cache-control'] || '';
       const maxAgeMatch = cacheControl.match(/max-age=(\d+)/);
@@ -140,6 +140,7 @@ dotenv.config({ path: '.env' });
 
 
 const app = express();
+app.set('trust proxy', 1);
 app.use(express.json({ limit: '1mb' })); // Low global limit for general route security
 
 // Define rate limiting rule for Gemini API proxy to prevent abuse
