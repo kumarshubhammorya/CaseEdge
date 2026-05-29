@@ -32,9 +32,9 @@ function getCacheKey(action: string, args: any[]): string {
 let googleCertsCache: Record<string, string> = {};
 let certsExpiry = 0;
 
-async function fetchGoogleCerts(): Promise<Record<string, string>> {
+async function fetchGoogleCerts(forceRefetch = false): Promise<Record<string, string>> {
   const now = Date.now();
-  if (now < certsExpiry && Object.keys(googleCertsCache).length > 0) {
+  if (!forceRefetch && now < certsExpiry && Object.keys(googleCertsCache).length > 0) {
     return googleCertsCache;
   }
   
@@ -91,8 +91,13 @@ async function verifyFirebaseToken(token: string): Promise<any> {
     throw new Error('Issuer mismatch');
   }
   
-  const certs = await fetchGoogleCerts();
-  const cert = certs[header.kid];
+  let certs = await fetchGoogleCerts();
+  let cert = certs[header.kid];
+  if (!cert) {
+    console.warn(`Key ID ${header.kid} not found in cache. Force refetching certificates...`);
+    certs = await fetchGoogleCerts(true);
+    cert = certs[header.kid];
+  }
   if (!cert) {
     throw new Error('Unknown key ID');
   }
