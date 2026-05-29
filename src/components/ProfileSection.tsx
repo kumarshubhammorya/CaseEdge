@@ -12,7 +12,7 @@ import {
   User, 
   LogIn, 
   LogOut, 
-  Coins, 
+  Zap, 
   Save, 
   GraduationCap, 
   Calendar, 
@@ -698,9 +698,9 @@ export const ProfileSection: React.FC = () => {
             
             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4 mt-4">
               {/* Token Display */}
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 text-xs font-semibold">
-                <Coins className="w-4 h-4" />
-                <span>{appState.tokens ?? 0} AI Tokens</span>
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 text-xs font-semibold">
+                <Zap className="w-4 h-4 fill-cyan-400/20 shrink-0" />
+                <span>{appState.tokens ?? 0} Tokens</span>
               </div>
               
               <button
@@ -1129,10 +1129,11 @@ export const ProfileSection: React.FC = () => {
                         Practice History
                       </h3>
 
-                      <div className="overflow-x-auto">
+                      {/* Desktop Table View */}
+                      <div className="hidden sm:block overflow-x-auto">
                         <table className="w-full text-left text-[11px] font-sans border-collapse">
                           <thead>
-                            <tr className="text-slate-500 border-b border-slate-850">
+                            <tr className="text-slate-550 border-b border-slate-850">
                               <th className="py-2.5 font-bold uppercase tracking-wider">Date</th>
                               <th className="py-2.5 font-bold uppercase tracking-wider">Case Name / Category</th>
                               <th className="py-2.5 font-bold uppercase tracking-wider text-center">Intake</th>
@@ -1149,10 +1150,10 @@ export const ProfileSection: React.FC = () => {
 
                               return (
                                 <tr key={idx} className="hover:bg-slate-900/30 transition-colors">
-                                  <td className="py-2.5 text-slate-500 font-mono font-medium">{formattedDate}</td>
+                                  <td className="py-2.5 text-slate-550 font-mono font-medium">{formattedDate}</td>
                                   <td className="py-2.5 font-semibold">
                                     <div>{item.caseTitle}</div>
-                                    <div className="text-[9px] text-slate-500 font-medium uppercase mt-0.5 tracking-tight flex items-center gap-1">
+                                    <div className="text-[9px] text-slate-550 font-medium uppercase mt-0.5 tracking-tight flex items-center gap-1">
                                       <Briefcase className="w-2.5 h-2.5" />
                                       {item.caseType}
                                     </div>
@@ -1166,6 +1167,49 @@ export const ProfileSection: React.FC = () => {
                             })}
                           </tbody>
                         </table>
+                      </div>
+
+                      {/* Mobile Card List View */}
+                      <div className="sm:hidden space-y-3">
+                        {activeDataset.map((item, idx) => {
+                          const date = item.createdAt?.toDate ? item.createdAt.toDate() : new Date();
+                          const formattedDate = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+                          const durationMinutes = Math.round((item.totalTimeSeconds || 0) / 60);
+
+                          return (
+                            <div key={idx} className="bg-slate-950/40 border border-slate-850 rounded-xl p-3.5 space-y-2.5">
+                              <div className="flex justify-between items-center">
+                                <span className="text-[10px] text-slate-500 font-mono font-medium">{formattedDate}</span>
+                                <span className="text-[10px] text-slate-400 font-mono flex items-center gap-1">
+                                  <Clock className="w-3 h-3 text-amber-500/80" /> {durationMinutes}m
+                                </span>
+                              </div>
+
+                              <div className="space-y-0.5">
+                                <div className="text-xs font-bold text-white">{item.caseTitle}</div>
+                                <div className="text-[9px] text-slate-550 font-medium uppercase tracking-tight flex items-center gap-1">
+                                  <Briefcase className="w-2.5 h-2.5" />
+                                  {item.caseType}
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-900/50">
+                                <div className="bg-slate-900/40 p-2 rounded border border-slate-900 text-center">
+                                  <div className="text-[9px] uppercase font-bold text-slate-500">Intake</div>
+                                  <div className="text-xs font-mono font-bold text-blue-400 mt-0.5">{item.intakeScore}%</div>
+                                </div>
+                                <div className="bg-slate-900/40 p-2 rounded border border-slate-900 text-center">
+                                  <div className="text-[9px] uppercase font-bold text-slate-500">Structure</div>
+                                  <div className="text-xs font-mono font-bold text-emerald-400 mt-0.5">{item.structuringScore}%</div>
+                                </div>
+                                <div className="bg-slate-900/40 p-2 rounded border border-slate-900 text-center">
+                                  <div className="text-[9px] uppercase font-bold text-slate-500">Logic</div>
+                                  <div className="text-xs font-mono font-bold text-purple-400 mt-0.5">{item.frameworkScore}%</div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   </div>

@@ -37,7 +37,8 @@ const INITIAL_STATE: AppState = {
   isSessionCompleted: false,
   focusedNodeId: null,
   hasReceivedLoginBonus: false,
-  lastReceivedBonusEmail: ""
+  lastReceivedBonusEmail: "",
+  mockInterview: null
 };
 
 interface AppContextProps {

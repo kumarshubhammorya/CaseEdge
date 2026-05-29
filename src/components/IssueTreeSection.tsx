@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
 import { Maximize2, Minimize2 } from 'lucide-react';
-import { buildIssueTree, evaluateIssueTree } from '../services/geminiService';
+import { buildIssueTree, evaluateIssueTree, suggestSubIssues } from '../services/geminiService';
 import { AppState, IssueTreeNode, NodeFeedbackItem } from '../types';
 import { EmptyState } from './EmptyState';
 import { ShimmerButton, CyclingLoadingText, Tooltip } from './MicroInteractions';
@@ -20,6 +20,7 @@ export const IssueTreeSection: React.FC<{ onNext?: () => void; onGoBack?: () => 
   const [isBuilding, setIsBuilding] = useState(false);
   const [isAuditing, setIsAuditing] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [expandingNodes, setExpandingNodes] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (appState.caseGlance?.coreProblem && !appState.playgroundTree) {
@@ -239,6 +240,72 @@ export const IssueTreeSection: React.FC<{ onNext?: () => void; onGoBack?: () => 
         meceFeedback: null
       }));
       toast.info("Sub-issue removed");
+    }
+  };
+
+  const handleExpandWithAI = async (parentId: string, parentLabel: string) => {
+    sounds.playClick();
+    if (!appState.caseBrief) {
+      toast.error("Case brief is missing.");
+      return;
+    }
+    const tokenCost = 2;
+    if ((appState.tokens ?? 0) < tokenCost) {
+      sounds.playError();
+      toast.error(`Insufficient tokens! Suggesting sub-issues requires ${tokenCost} tokens.`);
+      return;
+    }
+
+    setExpandingNodes(prev => ({ ...prev, [parentId]: true }));
+    try {
+      const suggestions = await suggestSubIssues(parentLabel, appState.caseBrief);
+      
+      if (!suggestions || suggestions.length === 0) {
+        throw new Error("No suggestions returned from AI.");
+      }
+
+      const newChildren: IssueTreeNode[] = suggestions.map((label: string) => ({
+        id: generateUniqueId(),
+        label,
+        children: []
+      }));
+
+      const addSuggestions = (node: IssueTreeNode): IssueTreeNode => {
+        if (node.id === parentId) {
+          return {
+            ...node,
+            children: [...(node.children || []), ...newChildren]
+          };
+        }
+        if (node.children) {
+          return {
+            ...node,
+            children: node.children.map(addSuggestions)
+          };
+        }
+        return node;
+      };
+
+      if (appState.playgroundTree) {
+        setAppState(prev => ({
+          ...prev,
+          playgroundTree: addSuggestions(prev.playgroundTree!),
+          tokens: Math.max(0, (prev.tokens ?? 50) - tokenCost),
+          meceFeedback: null
+        }));
+        sounds.playSuccess();
+        toast.success(`AI suggested sub-issues added! (-${tokenCost} tokens)`);
+      }
+    } catch (err: any) {
+      sounds.playError();
+      toast.error("Failed to suggest sub-issues: " + (err?.message || ""));
+      console.error(err);
+    } finally {
+      setExpandingNodes(prev => {
+        const next = { ...prev };
+        delete next[parentId];
+        return next;
+      });
     }
   };
 
@@ -468,6 +535,8 @@ export const IssueTreeSection: React.FC<{ onNext?: () => void; onGoBack?: () => 
                 onDeleteNode={handleDeleteNode}
                 nodeFeedbackMap={nodeFeedbackMap}
                 onAddSibling={handleAddSibling}
+                onExpandWithAI={handleExpandWithAI}
+                expandingNodes={expandingNodes}
               />
             </div>
 

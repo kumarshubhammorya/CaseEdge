@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Play, Pause, RotateCcw, Volume2, VolumeX, Zap, BookOpen, Settings } from 'lucide-react';
 import { sounds } from '../lib/sounds';
 import { Tooltip } from './MicroInteractions';
@@ -69,6 +69,19 @@ export const Timer = ({ activeSection, setActiveSection, onExport, onReset, show
       }, 1200);
     }
   }, [appState.tokens, prevTokens]);
+
+  const prevBriefRef = useRef<string>(appState.caseBrief);
+
+  useEffect(() => {
+    if (appState.caseBrief && appState.caseBrief !== prevBriefRef.current) {
+      const diff = Math.abs(appState.caseBrief.length - (prevBriefRef.current?.length || 0));
+      if (diff > 20) {
+        setTimeLeft(duration);
+        setIsRunning(true);
+      }
+    }
+    prevBriefRef.current = appState.caseBrief;
+  }, [appState.caseBrief, duration]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -206,7 +219,7 @@ export const Timer = ({ activeSection, setActiveSection, onExport, onReset, show
         )}
 
         <div className="flex flex-col items-end border-l border-slate-800 pl-4 sm:pl-6 shrink-0 relative">
-          <span className="text-[10px] uppercase text-slate-500 font-bold tracking-widest hidden sm:block">AI Balance</span>
+          <span className="text-[10px] uppercase text-slate-500 font-bold tracking-widest hidden sm:block">Tokens</span>
           <div className="flex items-center gap-1.5 sm:gap-2 sm:-mt-1 h-6 relative">
             <span className="text-xs sm:text-sm font-extrabold text-cyan-400 select-none flex items-center gap-1">
               <Zap className="w-3.5 h-3.5 text-cyan-400 fill-cyan-400/20 shrink-0 animate-[pulse_3s_ease-in-out_infinite]" /> {appState.tokens ?? 0}

@@ -152,7 +152,8 @@ export const AssumptionTracker = ({ onGoBack }: Props) => {
           />
         ) : (
           <>
-            <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/50 backdrop-blur-sm shadow-xl shrink-0">
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/50 backdrop-blur-sm shadow-xl shrink-0">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-slate-800 bg-slate-800/50">
@@ -250,6 +251,96 @@ export const AssumptionTracker = ({ onGoBack }: Props) => {
                   )}
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="md:hidden space-y-4">
+              {appState.assumptions && appState.assumptions.length > 0 ? (
+                appState.assumptions.map((assumption, index) => (
+                  <motion.div
+                    key={assumption.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="p-4 border border-slate-800 bg-slate-900/50 rounded-xl space-y-3 relative"
+                  >
+                    <button
+                      onClick={() => handleDeleteRow(assumption.id)}
+                      className="absolute top-4 right-4 text-slate-500 hover:text-red-500 transition-colors p-1 cursor-pointer"
+                      title="Delete row"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+
+                    <div className="space-y-1">
+                      <label className="block text-[9px] font-bold uppercase tracking-wider text-slate-500">
+                        Assumption Statement
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={assumption.statement}
+                        placeholder="e.g., Conversion rate will remain constant..."
+                        onChange={(e) => handleUpdateRow(assumption.id, 'statement', e.target.value)}
+                        className="w-full bg-slate-950/40 border border-slate-800 focus:border-blue-500/50 rounded-lg p-2.5 outline-none text-slate-200 text-xs focus:ring-1 focus:ring-blue-500/20 transition-all font-sans resize-none"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="block text-[9px] font-bold uppercase tracking-wider text-slate-500">
+                          Category
+                        </label>
+                        <select
+                          value={assumption.category}
+                          onChange={(e) => handleUpdateRow(assumption.id, 'category', e.target.value as any)}
+                          className="w-full bg-slate-950/40 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-300 outline-none focus:border-blue-500/50 transition-colors"
+                        >
+                          <option value="Market">Market</option>
+                          <option value="Financial">Financial</option>
+                          <option value="Operational">Operational</option>
+                          <option value="Regulatory">Regulatory</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="block text-[9px] font-bold uppercase tracking-wider text-slate-500">
+                          Risk Level
+                        </label>
+                        <select
+                          value={assumption.riskLevel}
+                          onChange={(e) => handleUpdateRow(assumption.id, 'riskLevel', e.target.value as any)}
+                          className={`w-full border rounded-lg px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider outline-none transition-colors ${riskStyles[assumption.riskLevel]}`}
+                        >
+                          <option value="High" className="bg-slate-900">High</option>
+                          <option value="Medium" className="bg-slate-900">Medium</option>
+                          <option value="Low" className="bg-slate-900">Low</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="block text-[9px] font-bold uppercase tracking-wider text-slate-500">
+                        What breaks this?
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={assumption.whatBreaksThis}
+                        placeholder="e.g., A new competitor enters within 6 months..."
+                        onChange={(e) => handleUpdateRow(assumption.id, 'whatBreaksThis', e.target.value)}
+                        className="w-full bg-slate-950/40 border border-slate-800 focus:border-blue-500/50 rounded-lg p-2.5 outline-none text-slate-400 text-xs italic focus:ring-1 focus:ring-blue-500/20 transition-all font-sans resize-none"
+                      />
+                    </div>
+                  </motion.div>
+                ))
+              ) : (
+                <div className="p-8 border border-dashed border-slate-800 rounded-xl bg-slate-900/20 text-center flex flex-col items-center gap-3 animate-pulse opacity-40">
+                  <AlertTriangle className="w-12 h-12 text-slate-600" />
+                  <div>
+                    <p className="text-slate-400 font-medium text-xs uppercase tracking-widest">No assumptions tracked</p>
+                    <p className="text-slate-600 text-xs mt-1">Generate from recommendation or add manually.</p>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 shrink-0 pb-4">

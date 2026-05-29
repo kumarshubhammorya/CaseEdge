@@ -1,6 +1,5 @@
 import React, { useRef } from 'react';
 import { Upload } from 'lucide-react';
-import { CLASSIC_CASES } from './ClassicCases';
 import { sounds } from '../../lib/sounds';
 import { toast } from 'sonner';
 
@@ -10,6 +9,7 @@ type IntakeUploaderProps = {
   onCaseBriefChange: (val: string) => void;
   onClassicCaseSelect: (content: string) => void;
   onFileSelect: (file: File) => void;
+  onGoToLibrary?: () => void;
 };
 
 export const IntakeUploader: React.FC<IntakeUploaderProps> = ({
@@ -18,6 +18,7 @@ export const IntakeUploader: React.FC<IntakeUploaderProps> = ({
   onCaseBriefChange,
   onClassicCaseSelect,
   onFileSelect,
+  onGoToLibrary,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -37,26 +38,21 @@ export const IntakeUploader: React.FC<IntakeUploaderProps> = ({
 
   return (
     <div className="space-y-4 shrink-0">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center flex-wrap gap-2">
         <span className="text-xs text-slate-500 font-bold uppercase tracking-wider">Upload Case Brief</span>
-        <select 
-          className="bg-slate-800 border border-slate-700 text-slate-355 text-[10px] rounded px-2.5 py-1.5 uppercase tracking-wider font-extrabold outline-none focus:border-blue-500 cursor-pointer"
-          onChange={(e) => {
-            if (e.target.value) {
-              const selectedCase = CLASSIC_CASES.find(c => c.title === e.target.value);
-              if (selectedCase) {
+        <div className="flex items-center gap-2">
+          {onGoToLibrary && (
+            <button
+              onClick={() => {
                 sounds.playClick();
-                onClassicCaseSelect(selectedCase.content);
-              }
-            }
-          }}
-          value=""
-        >
-          <option value="" disabled>Quick Start: Classic Cases</option>
-          {CLASSIC_CASES.map(c => (
-            <option key={c.title} value={c.title}>{c.title}</option>
-          ))}
-        </select>
+                onGoToLibrary();
+              }}
+              className="bg-cyan-600/10 hover:bg-cyan-600 border border-cyan-500/20 hover:border-cyan-500 text-cyan-400 hover:text-white text-[10px] rounded px-3 py-1.5 uppercase tracking-wider font-extrabold transition-all cursor-pointer"
+            >
+              Browse Case Library
+            </button>
+          )}
+        </div>
       </div>
       
       <div

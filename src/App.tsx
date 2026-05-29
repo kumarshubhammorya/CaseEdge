@@ -3,7 +3,7 @@ import { Toaster, toast } from 'sonner';
 import { Sidebar } from './components/Sidebar';
 import { MobileNav } from './components/MobileNav';
 import { Timer } from './components/Timer';
-import { IntakeSection } from './components/IntakeSection';
+import { IntakeSection, getHighlightedCaseHtml } from './components/IntakeSection';
 import { IssueTreeSection } from './components/IssueTreeSection';
 import { FrameworksSection } from './components/FrameworksSection';
 import { DrafterSection } from './components/DrafterSection';
@@ -15,10 +15,11 @@ import { AssumptionTracker } from './components/AssumptionTracker';
 import { AdminSection } from './components/AdminSection';
 import { ProfileSection } from './components/ProfileSection';
 import { Landing } from './components/Landing';
+import { MockInterviewSection } from './components/MockInterviewSection';
 import { UserGuide } from './components/UserGuide';
 import { ScrollDownIndicator } from './components/ScrollDownIndicator';
 import { ProgressBar } from './components/ProgressBar';
-import { useAppContext } from './context/AppContext';
+import { useAppContext, INITIAL_STATE } from './context/AppContext';
 import { useAuth } from './lib/AuthContext';
 import { exportSessionToPdf } from './lib/exportUtils';
 import { sounds } from './lib/sounds';
@@ -348,6 +349,27 @@ export default function App() {
     setSessionKey(prev => prev + 1);
   };
 
+  const prevCaseBriefRef = React.useRef<string>(appState.caseBrief);
+
+  useEffect(() => {
+    if (appState.caseBrief && appState.caseBrief !== prevCaseBriefRef.current) {
+      const diff = Math.abs(appState.caseBrief.length - (prevCaseBriefRef.current?.length || 0));
+      if (diff > 20) {
+        setAppState(prev => ({
+          ...INITIAL_STATE,
+          caseBrief: appState.caseBrief,
+          tokens: prev.tokens,
+          hasReceivedLoginBonus: prev.hasReceivedLoginBonus,
+          lastReceivedBonusEmail: prev.lastReceivedBonusEmail
+        }));
+        setSessionKey(prev => prev + 1);
+        setActiveSection('intake');
+        toast.info("New case loaded! Session timer started.");
+      }
+    }
+    prevCaseBriefRef.current = appState.caseBrief;
+  }, [appState.caseBrief, setAppState]);
+
   const handleLaunch = () => {
     sounds.playLaunch();
     sessionStorage.setItem('caseedge_app_launched', 'true');
@@ -620,13 +642,14 @@ export default function App() {
           <ProgressBar />
           {!showUserGuide && (activeSection !== 'intake' || appState.caseGlance) && <ScrollDownIndicator />}
           <div className="w-full max-w-5xl mx-auto py-2 md:py-4 px-4 md:px-6 lg:px-8 flex-1 flex flex-col min-h-0 pb-[100px] md:pb-8">
-            {activeSection === 'intake' && <IntakeSection onNext={() => setActiveSection('issueTree')} />}
+            {activeSection === 'intake' && <IntakeSection onNext={() => setActiveSection('issueTree')} onGoToLibrary={() => setActiveSection('library')} />}
             {activeSection === 'library' && <LibrarySection onImport={() => setActiveSection('intake')} />}
             {activeSection === 'issueTree' && <IssueTreeSection onNext={() => setActiveSection('frameworks')} onGoBack={() => setActiveSection('intake')} />}
             {activeSection === 'frameworks' && <FrameworksSection onNext={() => setActiveSection('drafter')} onGoBack={() => setActiveSection('issueTree')} />}
             {activeSection === 'drafter' && <DrafterSection onNext={() => setActiveSection('slideOutline')} onGoToAssumptions={() => setActiveSection('assumptions')} onGoBack={() => setActiveSection('frameworks')} />}
             {activeSection === 'slideOutline' && <SlideOutlineSection onNext={() => setActiveSection('qa')} onGoBack={() => setActiveSection('drafter')} />}
             {activeSection === 'qa' && <QASection onGoBack={() => setActiveSection('slideOutline')} />}
+            {activeSection === 'mockInterview' && <MockInterviewSection onGoBack={() => setActiveSection('drafter')} />}
             {activeSection === 'assumptions' && <AssumptionTracker onGoBack={() => setActiveSection('intake')} />}
             {activeSection === 'database' && <DatabaseSection />}
             {activeSection === 'admin' && <AdminSection />}
@@ -648,7 +671,7 @@ export default function App() {
           <span className="text-blue-500 truncate">● <span className="hidden sm:inline">GEMINI_</span>ONLINE</span>
         </div>
       </footer>
-      <DiagnosticsPanel />
+      {isAdmin && <DiagnosticsPanel />}
 
       {/* Case Brief Slide-out Drawer */}
       {showCaseBriefDrawer && appState.caseBrief && (
@@ -712,9 +735,10 @@ export default function App() {
 
               <div className="space-y-3">
                 <span className="text-[10px] uppercase text-cyan-400 font-bold tracking-wider block">Full Case Text</span>
-                <div className="bg-slate-950/20 border border-slate-800 rounded-xl p-4 text-xs text-slate-300 leading-relaxed whitespace-pre-wrap font-sans">
-                  {appState.caseBrief}
-                </div>
+                <div 
+                  className="bg-slate-950/20 border border-slate-800 rounded-xl p-4 text-xs text-slate-300 leading-relaxed font-sans"
+                  dangerouslySetInnerHTML={{ __html: getHighlightedCaseHtml(appState.caseBrief, appState.userClues) }}
+                />
               </div>
             </div>
             

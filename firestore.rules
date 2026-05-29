@@ -6,7 +6,7 @@ service cloud.firestore {
     }
 
     function isSignedIn() { return request.auth != null; }
-    function isAdmin() { return isSignedIn() && request.auth.token.email == 'kumarshubhammorya@gmail.com'; }
+    function isAdmin() { return isSignedIn() && request.auth.token.email == 'kumarshubhammorya@gmail.com' && request.auth.token.email_verified == true; }
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }
     function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
@@ -49,7 +49,9 @@ service cloud.firestore {
         && isValidId(caseId)
         && isValidPublicCase(incoming())
         && incoming().keys().size() >= 7;
-      allow update: if false;
+      allow update: if isSignedIn()
+        && isValidPublicCase(incoming())
+        && (incoming().ownerId == existing().ownerId || isAdmin());
       allow delete: if isSignedIn() && (existing().ownerId == request.auth.uid || isAdmin());
     }
 

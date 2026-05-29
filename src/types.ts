@@ -105,6 +105,7 @@ export type AppState = {
   lastReceivedBonusEmail?: string;
   isSessionCompleted?: boolean;
   focusedNodeId?: string | null;
+  mockInterview?: MockInterviewSession | null;
 };
 
 export type UserClue = {
@@ -118,3 +119,30 @@ export type IntakeFeedback = {
   missingClues: string[];
   correctClues: string[];
 };
+
+export type MockInterviewMessage = {
+  id: string;
+  sender: 'interviewer' | 'user' | 'system';
+  text: string;
+  timestamp: string;
+  isHint?: boolean;
+};
+
+export type MockInterviewFeedback = {
+  score: number;
+  strengths: string[];
+  weaknesses: string[];
+  actionableTips: string[];
+  overallSummary: string;
+};
+
+export type MockInterviewSession = {
+  config: {
+    persona: 'supportive' | 'mbb_partner' | 'skeptical';
+    focus: 'structuring' | 'math' | 'synthesis' | 'all';
+  } | null;
+  messages: MockInterviewMessage[];
+  feedback: MockInterviewFeedback | null;
+  status: 'not_started' | 'active' | 'completed';
+};
+

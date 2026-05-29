@@ -1,5 +1,6 @@
 import { SCRStructure } from "../types";
 import { telemetry } from "../lib/telemetry";
+import { auth } from "../lib/firebase";
 
 async function callProxy(action: string, args: any[]): Promise<any> {
   const startTime = performance.now();
@@ -20,12 +21,23 @@ async function callProxy(action: string, args: any[]): Promise<any> {
     }
   }
 
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  if (auth.currentUser) {
+    try {
+      const token = await auth.currentUser.getIdToken();
+      headers['Authorization'] = `Bearer ${token}`;
+    } catch (tokenErr) {
+      console.warn("Failed to retrieve auth token:", tokenErr);
+    }
+  }
+
   try {
     const response = await fetch('/api/gemini/generate', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify({ action, args, config: configPayload }),
     });
     
@@ -130,3 +142,20 @@ export async function getFrameworkHint(caseBrief: string, caseGlanceJson: string
 export async function generateCaseBrief(prompt: string) {
   return callProxy('generateCaseBrief', [prompt]);
 }
+
+export async function generateMockInterviewResponse(caseBrief: string, persona: string, focus: string, history: any[], userReply: string) {
+  return callProxy('generateMockInterviewResponse', [caseBrief, persona, focus, JSON.stringify(history), userReply]);
+}
+
+export async function generateMockInterviewFeedback(caseBrief: string, persona: string, focus: string, history: any[]) {
+  return callProxy('generateMockInterviewFeedback', [caseBrief, persona, focus, JSON.stringify(history)]);
+}
+
+export async function getMockInterviewHint(caseBrief: string, focus: string, history: any[]) {
+  return callProxy('getMockInterviewHint', [caseBrief, focus, JSON.stringify(history)]);
+}
+
+export async function suggestSubIssues(parentIssue: string, caseBrief: string): Promise<string[]> {
+  return callProxy('suggestSubIssues', [parentIssue, caseBrief]);
+}
+

@@ -9,7 +9,7 @@ import {
   AlertCircle, 
   RefreshCw,
   User,
-  Coins,
+  Zap,
   Search,
   Loader2,
   BookOpen,
@@ -673,7 +673,7 @@ export function AdminSection() {
                     <tr className="text-slate-500 border-b border-slate-850 bg-slate-900/40 sticky top-0 z-10">
                       <th className="py-3 px-4 font-bold uppercase tracking-wider bg-[#0f172a]">User</th>
                       <th className="py-3 px-4 font-bold uppercase tracking-wider bg-[#0f172a]">College / Institution</th>
-                      <th className="py-3 px-4 font-bold uppercase tracking-wider text-center bg-[#0f172a]">AI Balance</th>
+                      <th className="py-3 px-4 font-bold uppercase tracking-wider text-center bg-[#0f172a]">Tokens</th>
                       <th className="py-3 px-4 font-bold uppercase tracking-wider text-right bg-[#0f172a]">Quick Token Actions</th>
                     </tr>
                   </thead>
@@ -695,8 +695,8 @@ export function AdminSection() {
                             </span>
                           </td>
                           <td className="py-3 px-4 text-center">
-                            <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 font-bold font-mono text-[10px]">
-                              <Coins className="w-3.5 h-3.5" />
+                            <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-bold font-mono text-[10px]">
+                              <Zap className="w-3.5 h-3.5 fill-cyan-400/20 shrink-0" />
                               <span>{u.tokens}</span>
                             </div>
                           </td>
@@ -836,7 +836,7 @@ export function AdminSection() {
                     Signup Bonus Tokens
                   </label>
                   <div className="relative">
-                    <Coins className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-550" />
+                    <Zap className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-400 fill-cyan-400/20 shrink-0" />
                     <input
                       type="number"
                       value={configSignupBonus}
@@ -854,7 +854,7 @@ export function AdminSection() {
                     Socratic Evaluation Cost (Tokens)
                   </label>
                   <div className="relative">
-                    <Coins className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-550" />
+                    <Zap className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-400 fill-cyan-400/20 shrink-0" />
                     <input
                       type="number"
                       value={configAiCost}
@@ -872,7 +872,7 @@ export function AdminSection() {
                     Socratic Hint Cost (Tokens)
                   </label>
                   <div className="relative">
-                    <Coins className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-550" />
+                    <Zap className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-400 fill-cyan-400/20 shrink-0" />
                     <input
                       type="number"
                       value={configHintCost}
@@ -965,7 +965,7 @@ export function AdminSection() {
                     Stripe Secret Key (Future)
                   </label>
                   <div className="relative">
-                    <Coins className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-550" />
+                    <Zap className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-400 fill-cyan-400/20 shrink-0" />
                     <input
                       type={showSecrets['stripe'] ? 'text' : 'password'}
                       value={configStripeSecretKey}

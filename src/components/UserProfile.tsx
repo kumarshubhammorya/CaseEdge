@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAuth } from '../lib/AuthContext';
 import { useAppContext } from '../context/AppContext';
-import { User, Coins, ChevronRight } from 'lucide-react';
+import { User, Zap, ChevronRight } from 'lucide-react';
 import { sounds } from '../lib/sounds';
 
 interface UserProfileProps {
@@ -50,7 +50,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ activeSection, setActi
       className={`w-full flex items-center justify-between gap-3 p-2.5 rounded-xl border transition-all cursor-pointer ${
         isProfileActive 
           ? 'bg-blue-600/10 border-blue-500/30 text-blue-400' 
-          : 'border-slate-800 bg-slate-900/40 hover:bg-slate-800 text-slate-350 hover:text-white'
+          : 'border-slate-800 bg-slate-900/40 hover:bg-slate-800 text-slate-355 hover:text-white'
       }`}
     >
       <div className="flex items-center gap-2.5 min-w-0">
@@ -61,7 +61,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ activeSection, setActi
             className="w-8 h-8 rounded-full border border-slate-700 shrink-0 object-cover" 
           />
         ) : (
-          <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700 shrink-0 text-slate-350">
+          <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700 shrink-0 text-slate-355">
             <User className="w-4.5 h-4.5" />
           </div>
         )}
@@ -69,8 +69,8 @@ export const UserProfile: React.FC<UserProfileProps> = ({ activeSection, setActi
           <span className="text-xs font-bold truncate text-left w-full">
             {user.displayName || 'Consultant'}
           </span>
-          <div className="flex items-center gap-1 mt-0.5 text-yellow-400">
-            <Coins className="w-3 h-3" />
+          <div className="flex items-center gap-1 mt-0.5 text-cyan-400">
+            <Zap className="w-3 h-3 fill-cyan-400/20 shrink-0 animate-[pulse_3s_ease-in-out_infinite]" />
             <span className="text-[10px] font-bold">{appState.tokens ?? 0}</span>
           </div>
         </div>

@@ -1,4 +1,4 @@
-import { FileText, Grid, CheckCircle, HelpCircle, Network, Users, Zap, Presentation, Database, ShieldCheck, BookOpen, BarChart, ExternalLink, Lock, Globe } from 'lucide-react';
+import { FileText, Grid, CheckCircle, HelpCircle, Network, Users, Zap, Presentation, Database, ShieldCheck, BookOpen, BarChart, ExternalLink, Lock, Globe, MessageSquare } from 'lucide-react';
 import React from 'react';
 import { motion } from 'motion/react';
 import { toast } from 'sonner';
@@ -22,6 +22,7 @@ export const SECTIONS = [
   { id: 'assumptions', label: 'Assumptions', icon: ShieldCheck },
   { id: 'slideOutline', label: 'Slide Outline', icon: Presentation },
   { id: 'qa', label: 'Judge Q&A', icon: HelpCircle },
+  { id: 'mockInterview', label: 'Mock Interview', icon: MessageSquare },
   { id: 'library', label: 'Case Library', icon: Globe },
   { id: 'database', label: 'Cloud Files', icon: Database },
 ];
@@ -47,6 +48,7 @@ export const isSectionEnabled = (sectionId: string, appState: AppState): boolean
       return isIntakeCompleted && isDrafterCompleted;
     case 'slideOutline':
     case 'qa':
+    case 'mockInterview':
       return isIntakeCompleted && isDrafterCompleted;
     default:
       return true;

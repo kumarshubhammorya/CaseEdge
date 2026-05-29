@@ -27,11 +27,155 @@ import { IntakeCoachPanel } from './intake/IntakeCoachPanel';
 import { CaseGlanceView } from './intake/CaseGlanceView';
 import { useAppContext } from '../context/AppContext';
 
-type Props = {
-  onNext?: () => void;
+export const formatInlineMarkdown = (text: string): string => {
+  if (!text) return "";
+  let formatted = text;
+  // Bold (**text** or __text__)
+  formatted = formatted.replace(/\*\*([^*]+)\*\*/g, '<strong class="font-bold text-slate-200">$1</strong>');
+  formatted = formatted.replace(/__([^_]+)__/g, '<strong class="font-bold text-slate-200">$1</strong>');
+  // Italics (*text* or _text_)
+  formatted = formatted.replace(/\*([^*]+)\*/g, '<em class="italic text-slate-300">$1</em>');
+  formatted = formatted.replace(/_([^_]+)_/g, '<em class="italic text-slate-300">$1</em>');
+  return formatted;
 };
 
-export const IntakeSection: React.FC<Props> = ({ onNext }) => {
+export const renderHtmlTable = (rows: string[]) => {
+  const actualRows = rows.filter(r => !r.includes('---') && r.trim().length > 0);
+  if (actualRows.length === 0) return "";
+  
+  let html = `<div class="overflow-x-auto my-3 border border-slate-800 rounded-xl bg-slate-950/20"><table class="w-full text-left text-xs font-sans border-collapse">`;
+  
+  actualRows.forEach((row, index) => {
+    const cells = row.split('|').map(c => c.trim());
+    if (cells.length > 0 && cells[0] === "") cells.shift();
+    if (cells.length > 0 && cells[cells.length - 1] === "") cells.pop();
+
+    const tag = index === 0 ? 'th' : 'td';
+    const rowClass = index === 0 
+      ? 'bg-slate-900/60 text-slate-400 font-bold border-b border-slate-800' 
+      : 'border-b border-slate-850 text-slate-355 hover:bg-slate-900/10 transition-colors';
+      
+    html += `<tr class="${rowClass}">`;
+    cells.forEach(cell => {
+      html += `<${tag} class="py-2 px-3">${formatInlineMarkdown(cell)}</${tag}>`;
+    });
+    html += `</tr>`;
+  });
+  
+  html += `</table></div>`;
+  return html;
+};
+
+export const convertMarkdownToHtml = (markdown: string) => {
+  if (!markdown) return "";
+  
+  const lines = markdown.split('\n');
+  let inTable = false;
+  let tableRows: string[] = [];
+  const processedLines: string[] = [];
+  
+  for (let line of lines) {
+    const trimmed = line.trim();
+    
+    // 1. Detect and parse table lines
+    if (trimmed.includes('|')) {
+      inTable = true;
+      tableRows.push(line);
+      continue;
+    } else if (inTable) {
+      processedLines.push(renderHtmlTable(tableRows));
+      tableRows = [];
+      inTable = false;
+    }
+    
+    // 2. Parse headers
+    const headerMatch = line.match(/^\s*(#{1,6})\s+(.*?)\s*#*$/);
+    if (headerMatch) {
+      const level = headerMatch[1].length;
+      const text = formatInlineMarkdown(headerMatch[2]);
+      const headerClasses: Record<number, string> = {
+        1: 'text-base font-extrabold text-white mt-4 mb-2 font-heading tracking-tight block border-b border-slate-850 pb-1',
+        2: 'text-xs font-bold text-cyan-400 mt-4 mb-2 font-heading uppercase tracking-wider block',
+        3: 'text-[11px] font-bold text-slate-200 mt-3 mb-1 uppercase tracking-wide block'
+      };
+      const cls = headerClasses[level] || 'font-bold text-slate-200 block';
+      processedLines.push(`<span class="${cls}">${text}</span>`);
+      continue;
+    }
+    
+    // 3. Parse unordered lists
+    const listMatch = line.match(/^\s*(\*|-|\+)\s+(.*)$/);
+    if (listMatch) {
+      const indent = line.match(/^\s*/)?.[0].length || 0;
+      const plClass = indent >= 4 ? 'pl-6' : indent >= 2 ? 'pl-4' : 'pl-2';
+      const text = formatInlineMarkdown(listMatch[2]);
+      processedLines.push(`<span class="flex items-start gap-2 ${plClass} my-1 text-slate-350 leading-relaxed font-sans text-xs"><span>•</span><span>${text}</span></span>`);
+      continue;
+    }
+
+    // 4. Parse ordered lists
+    const orderedListMatch = line.match(/^\s*(\d+)\.\s+(.*)$/);
+    if (orderedListMatch) {
+      const indent = line.match(/^\s*/)?.[0].length || 0;
+      const plClass = indent >= 4 ? 'pl-6' : indent >= 2 ? 'pl-4' : 'pl-2';
+      const num = orderedListMatch[1];
+      const text = formatInlineMarkdown(orderedListMatch[2]);
+      processedLines.push(`<span class="flex items-start gap-2 ${plClass} my-1 text-slate-350 leading-relaxed font-sans text-xs"><span class="font-mono text-[10px] text-slate-500 min-w-[12px] text-right">${num}.</span><span>${text}</span></span>`);
+      continue;
+    }
+    
+    // 5. Default paragraph line
+    processedLines.push(formatInlineMarkdown(line));
+  }
+  
+  if (inTable && tableRows.length > 0) {
+    processedLines.push(renderHtmlTable(tableRows));
+  }
+  
+  return processedLines.join('\n');
+};
+
+export function getHighlightedCaseHtml(caseBrief: string, userClues: UserClue[] = []) {
+  if (!caseBrief) return "";
+  let htmlContent = convertMarkdownToHtml(caseBrief);
+  
+  // Sort clues by text length descending so longer matching spans wrap shorter ones correctly
+  const sortedClues = [...(userClues || [])].sort((a, b) => b.text.length - a.text.length);
+  
+  sortedClues.forEach((clue) => {
+    const categoryColors: Record<string, string> = {
+      objective: 'bg-blue-500/20 text-blue-300 border-blue-500/50',
+      constraint: 'bg-red-500/20 text-red-300 border-red-500/50',
+      stakeholder: 'bg-green-500/20 text-green-300 border-green-500/50',
+      metric: 'bg-amber-500/20 text-amber-300 border-amber-500/50'
+    };
+    const colorClass = categoryColors[clue.category] || 'bg-slate-700 text-slate-200';
+    
+    // Safe replacement: split by HTML tags, search only in text nodes
+    const parts = htmlContent.split(/(<[^>]+>)/g);
+    for (let i = 0; i < parts.length; i++) {
+      if (!parts[i].startsWith('<')) {
+        // Strip any raw markdown styling characters from the clue text
+        const cleanClue = clue.text.replace(/[\*#_~|`]/g, '').trim();
+        if (cleanClue.length >= 2) {
+          const escapedClue = cleanClue.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+          const regex = new RegExp(`(${escapedClue})`, 'g');
+          parts[i] = parts[i].replace(regex, `<span class="px-1.5 py-0.5 rounded border ${colorClass} font-semibold transition-all select-none">$1</span>`);
+        }
+      }
+    }
+    htmlContent = parts.join('');
+  });
+
+  return htmlContent;
+}
+
+type Props = {
+  onNext?: () => void;
+  onGoToLibrary?: () => void;
+};
+
+export const IntakeSection: React.FC<Props> = ({ onNext, onGoToLibrary }) => {
   const { appState, setAppState } = useAppContext();
   const [showBiEdgeBanner, setShowBiEdgeBanner] = useState(() => {
     return localStorage.getItem('hide-biedge-banner') !== 'true';
@@ -238,7 +382,7 @@ export const IntakeSection: React.FC<Props> = ({ onNext }) => {
         if (words.length === 0) return;
         
         // Escape regex characters in each word
-        const regexPattern = words.map(w => w.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')).join('\\s+');
+        const regexPattern = words.map(w => w.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')).join('[\\s\\*#|]+');
         const matchRegex = new RegExp(regexPattern);
         const match = appState.caseBrief.match(matchRegex);
         
@@ -261,8 +405,9 @@ export const IntakeSection: React.FC<Props> = ({ onNext }) => {
               top = rect.bottom - containerRect.top + spacing + container.scrollTop;
             }
             
-            // Calculate left position (approx tooltip width is 320px)
-            const tooltipWidth = 320;
+            // Calculate left position (approx tooltip width is 320px on desktop, 220px on mobile)
+            const isMobile = window.innerWidth < 640;
+            const tooltipWidth = isMobile ? 220 : 320;
             let left = rect.left - containerRect.left + (rect.width / 2) - (tooltipWidth / 2);
             
             // Clamp left position to stay within container bounds
@@ -356,36 +501,12 @@ export const IntakeSection: React.FC<Props> = ({ onNext }) => {
 
   const renderHighlightedText = () => {
     if (!appState.caseBrief) return null;
-    let content = appState.caseBrief;
-    
-    // Sort clues by text length descending so longer matching spans wrap shorter ones correctly
-    const sortedClues = [...(appState.userClues || [])].sort((a, b) => b.text.length - a.text.length);
-    
-    const tempDiv = document.createElement('div');
-    tempDiv.innerText = content;
-    let escapedContent = tempDiv.innerHTML;
-    
-    sortedClues.forEach((clue) => {
-      const categoryColors: Record<string, string> = {
-        objective: 'bg-blue-500/20 text-blue-300 border-blue-500/50',
-        constraint: 'bg-red-500/20 text-red-300 border-red-500/50',
-        stakeholder: 'bg-green-500/20 text-green-300 border-green-500/50',
-        metric: 'bg-amber-500/20 text-amber-300 border-amber-500/50'
-      };
-      const colorClass = categoryColors[clue.category] || 'bg-slate-700 text-slate-200';
-      
-      tempDiv.innerText = clue.text;
-      const escapedClue = tempDiv.innerHTML;
-      
-      const escapedRegex = escapedClue.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-      const regex = new RegExp(`(${escapedRegex})`, 'g');
-      escapedContent = escapedContent.replace(regex, `<span class="px-1.5 py-0.5 rounded border ${colorClass} font-semibold transition-all select-none">${clue.text}</span>`);
-    });
+    const htmlContent = getHighlightedCaseHtml(appState.caseBrief, appState.userClues);
     
     return (
       <div 
-        dangerouslySetInnerHTML={{ __html: escapedContent }} 
-        className="whitespace-pre-wrap leading-relaxed text-slate-300 text-sm select-text selection:bg-cyan-500/30 selection:text-white"
+        dangerouslySetInnerHTML={{ __html: htmlContent }} 
+        className="whitespace-pre-wrap leading-relaxed text-slate-355 text-xs select-text selection:bg-cyan-500/30 selection:text-white font-sans"
         onMouseUp={handleTextSelection}
         onTouchEnd={handleTextSelection}
       />
@@ -464,6 +585,7 @@ export const IntakeSection: React.FC<Props> = ({ onNext }) => {
             onCaseBriefChange={(val) => setAppState(prev => ({ ...prev, caseBrief: val, userClues: [], intakeFeedback: null }))}
             onClassicCaseSelect={(content) => setAppState(prev => ({ ...prev, caseBrief: content, userClues: [], intakeFeedback: null }))}
             onFileSelect={processFile}
+            onGoToLibrary={onGoToLibrary}
           />
         )}
 
@@ -539,25 +661,25 @@ export const IntakeSection: React.FC<Props> = ({ onNext }) => {
                       onClick={() => addHighlightClue('objective')}
                       className="px-2 py-1 rounded bg-blue-600/20 text-blue-400 hover:bg-blue-600 hover:text-white border border-blue-500/30 text-[10px] font-extrabold uppercase tracking-wide cursor-pointer whitespace-nowrap"
                     >
-                      🎯 Objective [O]
+                      🎯 <span className="hidden sm:inline">Objective [O]</span><span className="sm:hidden">Obj</span>
                     </button>
                     <button
                       onClick={() => addHighlightClue('constraint')}
                       className="px-2 py-1 rounded bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white border border-red-500/30 text-[10px] font-extrabold uppercase tracking-wide cursor-pointer whitespace-nowrap"
                     >
-                      ⚠️ Constraint [C]
+                      ⚠️ <span className="hidden sm:inline">Constraint [C]</span><span className="sm:hidden">Con</span>
                     </button>
                     <button
                       onClick={() => addHighlightClue('stakeholder')}
                       className="px-2 py-1 rounded bg-green-600/20 text-green-400 hover:bg-green-600 hover:text-white border border-green-500/30 text-[10px] font-extrabold uppercase tracking-wide cursor-pointer whitespace-nowrap"
                     >
-                      👥 Stakeholder [S]
+                      👥 <span className="hidden sm:inline">Stakeholder [S]</span><span className="sm:hidden">Stk</span>
                     </button>
                     <button
                       onClick={() => addHighlightClue('metric')}
                       className="px-2 py-1 rounded bg-amber-600/20 text-amber-400 hover:bg-amber-600 hover:text-white border border-amber-500/30 text-[10px] font-extrabold uppercase tracking-wide cursor-pointer whitespace-nowrap"
                     >
-                      📊 Metric [M]
+                      📊 <span className="hidden sm:inline">Metric [M]</span><span className="sm:hidden">Met</span>
                     </button>
                   </div>
                 )}

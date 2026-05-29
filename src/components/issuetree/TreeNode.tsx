@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronRight, AlertTriangle, Plus, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, AlertTriangle, Plus, Trash2, Sparkles, Loader2 } from 'lucide-react';
 import { EditableField, Tooltip } from '../MicroInteractions';
 import { sounds } from '../../lib/sounds';
 import { IssueTreeNode, NodeFeedbackItem } from '../../types';
@@ -14,6 +14,8 @@ type TreeNodeProps = {
   onDeleteNode?: (nodeId: string) => void;
   nodeFeedbackMap?: { [nodeId: string]: NodeFeedbackItem };
   onAddSibling?: (siblingId: string) => void;
+  onExpandWithAI?: (nodeId: string, nodeLabel: string) => Promise<void>;
+  expandingNodes?: Record<string, boolean>;
 };
 
 export const TreeNode: React.FC<TreeNodeProps> = ({ 
@@ -24,7 +26,9 @@ export const TreeNode: React.FC<TreeNodeProps> = ({
   onAddChild, 
   onDeleteNode, 
   nodeFeedbackMap,
-  onAddSibling
+  onAddSibling,
+  onExpandWithAI,
+  expandingNodes
 }) => {
   const [expanded, setExpanded] = useState(true);
   const { appState, setAppState } = useAppContext();
@@ -117,7 +121,24 @@ export const TreeNode: React.FC<TreeNodeProps> = ({
         </div>
 
         {isPlayground && (
-          <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5 ml-2">
+          <div className={`transition-opacity flex items-center gap-1.5 ml-2 ${expandingNodes?.[node.id] ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+            {onExpandWithAI && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onExpandWithAI(node.id, node.label);
+                }}
+                disabled={expandingNodes?.[node.id]}
+                className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-cyan-400 hover:text-cyan-300 border border-slate-700 disabled:opacity-50 transition-all cursor-pointer"
+                title="Suggest sub-issues with AI (Costs 2 ⚡)"
+              >
+                {expandingNodes?.[node.id] ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Sparkles className="w-3.5 h-3.5" />
+                )}
+              </button>
+            )}
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -160,6 +181,8 @@ export const TreeNode: React.FC<TreeNodeProps> = ({
               onDeleteNode={onDeleteNode}
               nodeFeedbackMap={nodeFeedbackMap}
               onAddSibling={onAddSibling}
+              onExpandWithAI={onExpandWithAI}
+              expandingNodes={expandingNodes}
             />
           ))}
           {isPlayground && onAddChild && (

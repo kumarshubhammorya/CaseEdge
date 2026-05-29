@@ -5,6 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
 import { AsyncLocalStorage } from 'async_hooks';
+import https from 'https';
 
 export const requestContext = new AsyncLocalStorage<{ apiKeyOverride?: string; activeModel?: string }>();
 
@@ -27,6 +28,103 @@ function getCacheKey(action: string, args: any[]): string {
   return crypto.createHash('sha256').update(payload).digest('hex');
 }
 
+// Cache for Google's public certificates
+let googleCertsCache: Record<string, string> = {};
+let certsExpiry = 0;
+
+async function fetchGoogleCerts(): Promise<Record<string, string>> {
+  const now = Date.now();
+  if (now < certsExpiry && Object.keys(googleCertsCache).length > 0) {
+    return googleCertsCache;
+  }
+  
+  return new Promise((resolve, reject) => {
+    https.get('https://www.googleapis.com/robot/v1/metadata/x509/securetoken-system%40system.gserviceaccount.com', (res) => {
+      let data = '';
+      const cacheControl = res.headers['cache-control'] || '';
+      const maxAgeMatch = cacheControl.match(/max-age=(\d+)/);
+      const maxAge = maxAgeMatch ? parseInt(maxAgeMatch[1], 10) : 3600;
+      
+      res.on('data', (chunk) => { data += chunk; });
+      res.on('end', () => {
+        try {
+          googleCertsCache = JSON.parse(data);
+          certsExpiry = Date.now() + (maxAge * 1000);
+          resolve(googleCertsCache);
+        } catch (e) {
+          reject(e);
+        }
+      });
+    }).on('error', (err) => {
+      reject(err);
+    });
+  });
+}
+
+async function verifyFirebaseToken(token: string): Promise<any> {
+  const projectId = process.env.VITE_FIREBASE_PROJECT_ID || 'gen-lang-client-0266123161';
+  
+  const parts = token.split('.');
+  if (parts.length !== 3) {
+    throw new Error('Invalid token structure');
+  }
+  
+  const [headerB64, payloadB64, signatureB64] = parts;
+  const header = JSON.parse(Buffer.from(headerB64, 'base64url').toString('utf8'));
+  const payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString('utf8'));
+  
+  if (header.alg !== 'RS256') {
+    throw new Error('Unsupported algorithm');
+  }
+  
+  const now = Math.floor(Date.now() / 1000);
+  if (payload.exp < now) {
+    throw new Error('Token has expired');
+  }
+  if (payload.iat > now + 60) {
+    throw new Error('Token is from the future');
+  }
+  if (payload.aud !== projectId) {
+    throw new Error('Audience mismatch');
+  }
+  if (payload.iss !== `https://securetoken.google.com/${projectId}`) {
+    throw new Error('Issuer mismatch');
+  }
+  
+  const certs = await fetchGoogleCerts();
+  const cert = certs[header.kid];
+  if (!cert) {
+    throw new Error('Unknown key ID');
+  }
+  
+  const verifier = crypto.createVerify('RSA-SHA256');
+  verifier.update(`${headerB64}.${payloadB64}`);
+  
+  const isValid = verifier.verify(cert, signatureB64, 'base64url');
+  if (!isValid) {
+    throw new Error('Signature verification failed');
+  }
+  
+  return payload;
+}
+
+async function authMiddleware(req: any, res: any, next: any) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Unauthorized: Missing token' });
+  }
+  
+  const token = authHeader.split(' ')[1];
+  try {
+    const decodedToken = await verifyFirebaseToken(token);
+    req.user = decodedToken;
+    next();
+  } catch (err: any) {
+    console.error('API Authentication failure:', err.message);
+    return res.status(401).json({ error: `Unauthorized: ${err.message}` });
+  }
+}
+
 
 // Load environment variables based on environment mode
 const appEnv = process.env.APP_ENV || process.env.NODE_ENV || 'development';
@@ -37,7 +135,7 @@ dotenv.config({ path: '.env' });
 
 
 const app = express();
-app.use(express.json({ limit: '50mb' })); // Support base64 file uploads
+app.use(express.json({ limit: '1mb' })); // Low global limit for general route security
 
 // Define rate limiting rule for Gemini API proxy to prevent abuse
 const apiLimiter = rateLimit({
@@ -668,6 +766,120 @@ async function getFrameworkHint(caseBrief: string, caseGlanceJson: string, propo
   );
 }
 
+async function generateMockInterviewResponse(
+  caseBrief: string,
+  persona: string,
+  focus: string,
+  historyJson: string,
+  userReply: string
+) {
+  const history = JSON.parse(historyJson);
+  const historyStr = history.map((m: any) => `${m.sender.toUpperCase()}: ${m.text}`).join('\n');
+  
+  const systemPrompt = `You are a management consulting interviewer conducting a mock case interview.
+Your persona is: ${persona}.
+- supportive: encouraging, patient, points out logical flaws constructively.
+- mbb_partner: very direct, rapid-fire, highly analytical, focuses on bottom-line impact.
+- skeptical: risk-averse, doubts recommendations, demands structured evidence.
+
+Your current focus is: ${focus} (structuring, math, synthesis, or all). Focus your questions and follow-ups on this dimension.
+
+Case Brief Context:
+${caseBrief}
+
+Conversation History so far:
+${historyStr}
+
+The user's latest response is: "${userReply}"
+
+Based on the latest user response and history, generate your next conversational response as the interviewer.
+- Stay in character.
+- Keep your response relatively concise (under 80 words) to maintain a natural conversation flow.
+- Challenge the user's logic, assumptions, or calculations if they are weak.
+- Do NOT jump directly to the end of the interview too quickly; guide them step-by-step.
+- If you are playing the 'mbb_partner', be polite but business-oriented and direct.
+- Return the interviewer's conversational response text directly, without any JSON formatting, system wrappers, or meta comments.`;
+
+  return await safeGenAI([{ text: systemPrompt }]);
+}
+
+async function generateMockInterviewFeedback(
+  caseBrief: string,
+  persona: string,
+  focus: string,
+  historyJson: string
+) {
+  const history = JSON.parse(historyJson);
+  const historyStr = history.map((m: any) => `${m.sender.toUpperCase()}: ${m.text}`).join('\n');
+
+  const prompt = `You are an elite case interview coach reviewing a candidate's complete mock interview.
+Interviewer Persona: ${persona}
+Interviewer Focus: ${focus}
+
+Case Brief Context:
+${caseBrief}
+
+Complete Conversation History:
+${historyStr}
+
+Evaluate the candidate's performance across the entire interview. Focus on how well they structured their ideas, handled numerical calculations (if math was discussed), and synthesized their recommendations.
+Calculate a score from 0 to 100.
+Identify exactly 3 distinct strengths, 3 distinct weaknesses, and 3 actionable tips for improvement.
+Provide an overall summary of their performance.
+Respond strictly in JSON matching the specified schema.`;
+
+  return await safeGenAI(
+    [{ text: prompt }],
+    {
+      type: Type.OBJECT,
+      properties: {
+        score: { type: Type.INTEGER },
+        strengths: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING }
+        },
+        weaknesses: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING }
+        },
+        actionableTips: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING }
+        },
+        overallSummary: { type: Type.STRING }
+      },
+      required: ["score", "strengths", "weaknesses", "actionableTips", "overallSummary"]
+    }
+  );
+}
+
+async function getMockInterviewHint(
+  caseBrief: string,
+  focus: string,
+  historyJson: string
+) {
+  const history = JSON.parse(historyJson);
+  const historyStr = history.map((m: any) => `${m.sender.toUpperCase()}: ${m.text}`).join('\n');
+
+  const prompt = `You are a Socratic case coach helping a student who is currently doing a mock interview.
+Current Focus: ${focus}
+
+Case Brief Context:
+${caseBrief}
+
+Conversation History so far:
+${historyStr}
+
+The student needs a hint to answer the interviewer's last challenge.
+Provide a subtle, guiding, Socratic hint.
+- Do NOT give the solution or calculation directly.
+- Ask a leading question or highlight a specific constraint or stakeholder in the case brief that they might have forgotten.
+- Keep the hint extremely concise (under 25 words).
+- Return the hint text directly in plain text, without any explanation or JSON wrapping.`;
+
+  return await safeGenAI([{ text: prompt }]);
+}
+
 async function generateCaseBrief(prompt: string) {
   return await safeGenAI(
     [
@@ -688,6 +900,37 @@ async function generateCaseBrief(prompt: string) {
       required: ["title", "description", "industry", "difficulty", "extractedText"]
     }
   );
+}
+
+async function suggestSubIssues(parentIssue: string, caseBrief: string) {
+  const result = await safeGenAI(
+    [
+      { text: `You are a McKinsey case interview coach. The student is building an issue tree to break down a business case study.
+
+Case Brief Context:
+${caseBrief}
+
+They are currently focusing on the following issue/question:
+"${parentIssue}"
+
+Provide a set of 2 to 4 MECE (Mutually Exclusive, Collectively Exhaustive) sub-issues or sub-questions that break down this issue logically.
+- Make them specific to the case study context.
+- Keep each sub-issue description concise, professional, and action-oriented (usually 3 to 8 words).
+- Ensure they do not overlap (mutually exclusive) and together cover the core drivers of this issue (collectively exhaustive).
+- Return only JSON with a "suggestions" key containing the array of strings.` }
+    ],
+    {
+      type: Type.OBJECT,
+      properties: {
+        suggestions: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING }
+        }
+      },
+      required: ["suggestions"]
+    }
+  );
+  return result?.suggestions || [];
 }
 
 const actions: Record<string, Function> = {
@@ -712,14 +955,18 @@ const actions: Record<string, Function> = {
   evaluateFrameworks,
   getFrameworkHint,
   generateCaseBrief,
+  generateMockInterviewResponse,
+  generateMockInterviewFeedback,
+  getMockInterviewHint,
+  suggestSubIssues,
 };
 
 app.get('/health', (req, res) => {
   res.status(200).send('OK');
 });
 
-// API proxy endpoint
-app.post('/api/gemini/generate', async (req, res) => {
+// API proxy endpoint (requires token authentication and accepts larger payload for file analysis)
+app.post('/api/gemini/generate', express.json({ limit: '50mb' }), authMiddleware, async (req, res) => {
   const { action, args, config } = req.body;
   if (!action || !actions[action]) {
     return res.status(400).json({ error: `Unknown action: ${action}` });
