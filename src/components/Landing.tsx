@@ -77,6 +77,20 @@ export const Landing: React.FC<LandingProps> = ({ onLaunch }) => {
     return () => clearInterval(typingInterval);
   }, []);
 
+  // Scroll to hash-linked section on load if target is present
+  useEffect(() => {
+    if (window.location.hash) {
+      const id = window.location.hash.substring(1);
+      const element = document.getElementById(id);
+      if (element) {
+        const timer = setTimeout(() => {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }, 300);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, []);
+
   const scrollToFeatures = () => {
     document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -133,9 +147,27 @@ export const Landing: React.FC<LandingProps> = ({ onLaunch }) => {
             </span>
           </div>
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-white/60">
-            <button onClick={scrollToFeatures} className="hover:text-white transition-colors focus-visible:text-white focus-visible:outline-none">Features</button>
-            <button onClick={scrollToHowItWorks} className="hover:text-white transition-colors focus-visible:text-white focus-visible:outline-none">How It Works</button>
-            <button onClick={scrollToAbout} className="hover:text-white transition-colors focus-visible:text-white focus-visible:outline-none">About</button>
+            <a 
+              href="#features" 
+              onClick={(e) => { e.preventDefault(); scrollToFeatures(); }}
+              className="hover:text-white transition-colors focus-visible:text-white focus-visible:outline-none cursor-pointer"
+            >
+              Features
+            </a>
+            <a 
+              href="#how-it-works" 
+              onClick={(e) => { e.preventDefault(); scrollToHowItWorks(); }}
+              className="hover:text-white transition-colors focus-visible:text-white focus-visible:outline-none cursor-pointer"
+            >
+              How It Works
+            </a>
+            <a 
+              href="#about" 
+              onClick={(e) => { e.preventDefault(); scrollToAbout(); }}
+              className="hover:text-white transition-colors focus-visible:text-white focus-visible:outline-none cursor-pointer"
+            >
+              About
+            </a>
             <a href="https://blog.caseedge.in" className="hover:text-white transition-colors focus-visible:text-white focus-visible:outline-none">Blog</a>
           </div>
           <motion.button 
@@ -157,11 +189,11 @@ export const Landing: React.FC<LandingProps> = ({ onLaunch }) => {
         
         <FadeInView className="max-w-5xl relative z-10">
           <h1 className="font-heading text-4xl sm:text-5xl md:text-7xl font-bold tracking-tight mb-6 md:mb-8 leading-tight">
-            <span className="bg-gradient-to-b from-white to-white/60 bg-clip-text text-transparent">Your Unfair Advantage</span> <br className="hidden md:block"/> 
+            <span className="bg-gradient-to-b from-white to-white/60 bg-clip-text text-transparent">CaseEdge — Your Unfair Advantage</span> <br className="hidden md:block"/> 
             <span className="bg-gradient-to-r from-[#00d4ff] to-[#3b82f6] bg-clip-text text-transparent">in the Case Room.</span>
           </h1>
           <p className="text-lg sm:text-xl md:text-2xl text-white/50 max-w-3xl mx-auto mb-8 md:mb-12 leading-relaxed font-sans">
-            CaseEdge gives MBA students a structured, AI-powered workflow to crack cases faster, build sharper recommendations, and walk into the room ready for anything.
+            CaseEdge is a structured, AI-powered case study and case competition preparation tool. Practice case interviews, build logic trees, and draft winning consulting presentations.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 md:gap-5 w-full px-4 sm:px-0">
             <motion.button 
@@ -173,15 +205,16 @@ export const Landing: React.FC<LandingProps> = ({ onLaunch }) => {
             >
                Launch CaseEdge <ArrowRight className="w-4 h-4 md:w-5 md:h-5 transition-transform group-hover:translate-x-1" />
             </motion.button>
-            <motion.button 
-              onClick={scrollToFeatures}
+            <motion.a 
+              href="#features"
+              onClick={(e) => { e.preventDefault(); scrollToFeatures(); }}
               whileHover={{ scale: 1.025 }}
               whileTap={{ scale: 0.98 }}
               transition={{ type: "spring", stiffness: 400, damping: 15 }}
-              className="w-full sm:w-auto px-6 py-4 md:px-10 md:py-5 lg:py-5 bg-white/5 hover:bg-white/10 text-white font-medium text-base md:text-lg rounded-sm border border-white/10 transition-all hover:border-white/20 focus-visible:ring-2 focus-visible:ring-[#00d4ff] focus-visible:ring-offset-2 focus-visible:outline-none focus-visible:ring-offset-slate-900 cursor-pointer"
+              className="w-full sm:w-auto px-6 py-4 md:px-10 md:py-5 lg:py-5 bg-white/5 hover:bg-white/10 text-white font-medium text-base md:text-lg rounded-sm border border-white/10 transition-all hover:border-white/20 focus-visible:ring-2 focus-visible:ring-[#00d4ff] focus-visible:ring-offset-2 focus-visible:outline-none focus-visible:ring-offset-slate-900 cursor-pointer text-center flex items-center justify-center animate-none"
             >
                See How It Works
-            </motion.button>
+            </motion.a>
           </div>
         </FadeInView>
 
@@ -224,7 +257,7 @@ export const Landing: React.FC<LandingProps> = ({ onLaunch }) => {
       {/* Social Proof Bar */}
       <div className="border-y border-white/10 bg-[#111318]/50 py-4 relative z-10">
         <div className="max-w-7xl mx-auto px-6 text-center font-mono text-xs text-white/40 flex flex-col md:flex-row justify-center items-center gap-2 md:gap-4 flex-wrap">
-          <span>Built for MBA case competitions</span>
+          <span>Built for MBA case competitions and consulting preparation</span>
           <span className="hidden md:inline">·</span>
           <span>Free to use</span>
         </div>
@@ -234,7 +267,7 @@ export const Landing: React.FC<LandingProps> = ({ onLaunch }) => {
       <section className="py-16 md:py-24 relative z-10 px-4 md:px-6 max-w-7xl mx-auto">
         <FadeInView>
           <h2 className="font-heading text-2xl sm:text-3xl md:text-4xl font-bold text-center mb-10 md:mb-16">
-            Case competitions are won <br className="hidden sm:block"/> in the preparation room.
+            Case competitions and consulting case studies <br className="hidden sm:block"/> are won in the preparation room.
           </h2>
         </FadeInView>
         <div className="grid md:grid-cols-3 gap-4 md:gap-6">
@@ -279,13 +312,13 @@ export const Landing: React.FC<LandingProps> = ({ onLaunch }) => {
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
             {[
-              { icon: FileText, title: "Active Clue Highlighter", desc: "Upload a PDF or paste case brief. Highlighting and tagging key details rewards you with token incentives.", tag: "First 5 minutes" },
-              { icon: Network, title: "Interactive MECE Tree", desc: "Build issue trees manually in the sandboxed playground, or audit your logic structure for MECE validation.", tag: "Minutes 5–15" },
-              { icon: Grid, title: "Socratic Guide Frameworks", desc: "Design strategic frameworks with hints and logic critique, or unlock recommended standard templates.", tag: "Minutes 5–15" },
-              { icon: CheckCircle, title: "Structured SCR Drafter", desc: "Formulate your recommendation using top-down SCR scaffolding (Lead recommendation, Pillars, and Risks).", tag: "Minutes 15–22" },
-              { icon: ShieldCheck, title: "Assumption Risk Tracker", desc: "Track operational, financial, market, and regulatory assumptions to isolate weaknesses.", tag: "Minutes 15–22" },
-              { icon: Calculator, title: "Financial Quantification", desc: "Compute quick back-of-the-envelope size, payback, and revenue estimates with explicit assumptions.", tag: "Minutes 20–25" },
-              { icon: HelpCircle, title: "Self-Calibration Q&As", desc: "Unlock model responses by grading your draft answers against structured checklists.", tag: "Final 15 minutes" },
+              { icon: FileText, title: "Case Study Clue Highlighter", desc: "Upload a PDF or paste case brief. Highlighting and tagging key details rewards you with token incentives.", tag: "First 5 minutes" },
+              { icon: Network, title: "MECE Issue Tree Builder", desc: "Build issue trees manually in the sandboxed playground, or audit your logic structure for MECE validation.", tag: "Minutes 5–15" },
+              { icon: Grid, title: "Strategic Consulting Frameworks", desc: "Design strategic frameworks with hints and logic critique, or unlock recommended standard templates.", tag: "Minutes 5–15" },
+              { icon: CheckCircle, title: "Consulting Recommendation Drafter", desc: "Formulate your recommendation using top-down SCR scaffolding (Situation, Complication, Resolution).", tag: "Minutes 15–22" },
+              { icon: ShieldCheck, title: "Case Study Risk Tracker", desc: "Track operational, financial, market, and regulatory assumptions to isolate weaknesses.", tag: "Minutes 15–22" },
+              { icon: Calculator, title: "Consulting Financial Math", desc: "Compute quick back-of-the-envelope size, payback, and revenue estimates with explicit assumptions.", tag: "Minutes 20–25" },
+              { icon: HelpCircle, title: "Consulting Q&A & Interview Prep", desc: "Unlock model responses by grading your draft answers against structured checklists.", tag: "Final 15 minutes" },
               { icon: AlertTriangle, title: "AI Token Budget Economy", desc: "Earn tokens by completing active socratic work and spend them to bypass steps when pressed for time.", tag: "Enforced continuously" }
             ].map((f, i) => (
               <FadeInView key={i} delay={i * 0.05} className="group relative">
@@ -350,7 +383,7 @@ export const Landing: React.FC<LandingProps> = ({ onLaunch }) => {
         <div className="max-w-4xl mx-auto">
           <FadeInView className="text-center mb-10 md:mb-12">
             <h2 className="font-heading text-3xl sm:text-4xl font-bold mb-4">
-              Not just another AI chat. <br className="sm:hidden"/>A structured workflow.
+              Not just another AI chat. <br className="sm:hidden"/>A structured workflow for consulting case studies.
             </h2>
           </FadeInView>
 
