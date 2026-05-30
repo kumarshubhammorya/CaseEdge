@@ -555,7 +555,7 @@ export const Landing: React.FC<LandingProps> = ({ onLaunch }) => {
               <rect x="15" y="12" width="6" height="20" fill="#00d4ff" />
               <polyline points="4,19 11,15 18,11 28,7" stroke="#00d4ff" strokeWidth="1.5" fill="none" />
             </svg>
-            <span>CaseEdge · Built by Shubham Maurya</span>
+            <span>CaseEdge (Case Edge) · Built by Shubham Maurya</span>
           </div>
           <div className="flex flex-wrap justify-center gap-4 md:gap-6">
             <button onClick={onLaunch} className="hover:text-[#00d4ff] transition-colors focus-visible:text-[#00d4ff] focus-visible:outline-none">Launch App</button>
